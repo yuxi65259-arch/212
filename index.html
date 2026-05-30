@@ -397,10 +397,14 @@
     /* Album covers horizontal layout */
     .album-covers { display: flex; gap: 20px; margin-top: 24px; overflow-x: auto; padding: 10px 0 20px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
     .album-cover { flex: 0 0 280px; border-radius: var(--radius-md); overflow: hidden; background: var(--glass-bg); border: 1px solid var(--glass-border); box-shadow: var(--shadow-sm); cursor: pointer; transition: all var(--transition); text-align: center; padding-bottom: 20px; scroll-snap-align: start; transform-style: preserve-3d; }
-    .album-cover-img { height: 200px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 56px; transition: transform 0.6s cubic-bezier(0.25,0.46,0.45,0.94); }
+    .album-cover-img { height: 200px; overflow: hidden; position: relative; }
+    .album-cover-img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.6s cubic-bezier(0.25,0.46,0.45,0.94); }
+    .album-cover:hover .album-cover-img img { transform: scale(1.12); }
+    .album-cover-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.2) 100%); }
+    .album-cover-icon { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 36px; filter: drop-shadow(0 2px 12px rgba(0,0,0,0.4)); }
     .album-cover-name { font-family: 'Noto Serif SC', serif; font-size: 16px; color: var(--deep); margin-top: 12px; }
-    .album-cover-count { font-family: 'Inter', sans-serif; font-size: 12px; color: var(--warm-brown); margin-top: 4px; }
-    .album-cover:hover .album-cover-img { transform: scale(1.1) translateZ(20px); }
+    .album-cover-count { font-family: 'Inter', sans-serif; font-size: 12px; color: var(--warm-brown); margin-top: 4px; letter-spacing: 1px; }
+    .album-cover-desc { font-family: 'Inter', sans-serif; font-size: 11px; color: var(--milky-tea); letter-spacing: 2px; margin-top: 2px; text-transform: uppercase; }
 </style>
 </head>
 <body>
@@ -946,10 +950,10 @@
 
     // ==================== ALBUM NAVIGATION ====================
     const albumMeta = [
-      { id: 'daily', name: '宿舍日常', icon: '🏠', bg: 'linear-gradient(135deg,#E8D5C4,#D4A574)' },
-      { id: 'outing', name: '一起出去玩', icon: '🌄', bg: 'linear-gradient(135deg,#C9A96E,#D4A574)' },
-      { id: 'graduation', name: '毕业季', icon: '🎓', bg: 'linear-gradient(135deg,#A67B5B,#C9A96E)' },
-      { id: 'funny', name: '搞怪合集', icon: '😂', bg: 'linear-gradient(135deg,#E8D5C4,#F5E6D3)' },
+      { id: 'daily', name: '宿舍日常', icon: '🏠', img: 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=600&h=400&fit=crop', desc: '温暖日常' },
+      { id: 'outing', name: '一起出去玩', icon: '🌄', img: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=400&fit=crop', desc: '山川湖海' },
+      { id: 'graduation', name: '毕业季', icon: '🎓', img: 'https://images.unsplash.com/photo-1523050854058-8df90110c7f1?w=600&h=400&fit=crop', desc: '青春万岁' },
+      { id: 'funny', name: '搞怪合集', icon: '😂', img: 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?w=600&h=400&fit=crop', desc: '快乐时光' },
     ];
 
     function renderAlbumCovers() {
@@ -960,8 +964,9 @@
         const count = photos.filter(p => p.cat === album.id).length;
         const card = document.createElement('div');
         card.className = 'album-cover tilt-card';
-        card.innerHTML = '<div class="album-cover-img" style="background:' + album.bg + '">' + album.icon + '</div>' +
+        card.innerHTML = '<div class="album-cover-img"><img src="' + album.img + '" alt="' + album.name + '" loading="lazy" /><div class="album-cover-overlay"></div><div class="album-cover-icon">' + album.icon + '</div></div>' +
           '<div class="album-cover-name">' + album.name + '</div>' +
+	          '<div class="album-cover-desc">' + album.desc + '</div>' +
           '<div class="album-cover-count">' + count + ' 张照片</div>';
         card.onclick = function() { openAlbum(album.id, album.name); };
         container.appendChild(card);
