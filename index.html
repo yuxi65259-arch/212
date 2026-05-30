@@ -339,9 +339,49 @@
     #musicBtn { transition: all 0.5s cubic-bezier(0.25,0.46,0.45,0.94); }
     #musicBtn:hover { transform: scale(1.1) rotate(180deg); box-shadow: var(--shadow-lg); }
 
+    /* 3D tilt & spatial effects */
+    .tilt-card { transition: transform 0.2s cubic-bezier(0.25,0.46,0.45,0.94); transform-style: preserve-3d; }
+    .tilt-card:hover { transform: rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) scale(1.03); }
+    .stat-card, .album-cover { transition: transform 0.2s cubic-bezier(0.25,0.46,0.45,0.94); transform-style: preserve-3d; }
+
+    /* Grain overlay */
+    .grain-overlay { position: fixed; inset: 0; z-index: 9999; pointer-events: none; opacity: 0.025; mix-blend-mode: overlay; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); background-size: 256px 256px; }
+
+    /* Parallax depth layers */
+    .parallax-layer { position: fixed; pointer-events: none; z-index: -1; border-radius: 50%; opacity: 0.12; filter: blur(60px); }
+    .parallax-1 { width: 500px; height: 500px; background: var(--golden); top: -10%; left: -10%; animation: floatSlow 14s ease-in-out infinite; }
+    .parallax-2 { width: 350px; height: 350px; background: var(--milky-tea); bottom: -5%; right: -8%; animation: floatSlow 18s ease-in-out infinite reverse; }
+    .parallax-3 { width: 200px; height: 200px; background: var(--golden); top: 40%; left: 55%; animation: floatSlow 12s ease-in-out infinite 3s; }
+    .parallax-4 { width: 150px; height: 150px; background: var(--warm-brown); top: 20%; right: 30%; animation: floatSlow 10s ease-in-out infinite 5s; }
+
+    /* Floating sparkles */
+    .sparkle { position: fixed; pointer-events: none; z-index: -1; width: 3px; height: 3px; background: var(--golden); border-radius: 50%; opacity: 0; animation: sparkleFloat 8s ease-in-out infinite; }
+    @keyframes sparkleFloat { 0% { opacity: 0; transform: translateY(100vh) scale(0); } 15% { opacity: 0.5; } 85% { opacity: 0.5; } 100% { opacity: 0; transform: translateY(-10vh) scale(1); } }
+
+    /* Label underline reveal */
+    .section-label { position: relative; display: inline-block; }
+    .section-label::after { content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 1.5px; background: var(--golden); transition: width 0.6s cubic-bezier(0.25,0.46,0.45,0.94); }
+    section.active .section-label::after { width: 100%; }
+
+    /* Lightbox fade transition */
+    #lightbox { transition: opacity 0.3s ease; opacity: 0; }
+    #lightbox.open { opacity: 1; }
+    #lightbox img { transform: scale(0.92); transition: transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94); }
+    #lightbox.open img { transform: scale(1); }
+    #lbCaption { transition: opacity 0.3s ease; }
+
+    /* Enhanced hover on album covers */
+    .album-cover { transform-style: preserve-3d; }
+    .album-cover-img { transition: transform 0.6s cubic-bezier(0.25,0.46,0.45,0.94); }
+    .album-cover:hover .album-cover-img { transform: scale(1.1) translateZ(20px); }
 </style>
 </head>
 <body>
+  <div class="grain-overlay"></div>
+  <div class="parallax-layer parallax-1"></div>
+  <div class="parallax-layer parallax-2"></div>
+  <div class="parallax-layer parallax-3"></div>
+  <div class="parallax-layer parallax-4"></div>
   <div class="paper-texture"></div>
 
   <!-- Splash -->
@@ -998,6 +1038,48 @@
     }
 
     function escapeHtml(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
+
+    // ==================== SPATIAL EFFECTS ====================
+    // Floating sparkle particles
+    (function createSparkles() {
+      for (let i = 0; i < 15; i++) {
+        const s = document.createElement('div');
+        s.className = 'sparkle';
+        s.style.left = Math.random() * 100 + '%';
+        s.style.width = s.style.height = (2 + Math.random() * 3) + 'px';
+        s.style.animationDuration = (6 + Math.random() * 8) + 's';
+        s.style.animationDelay = (Math.random() * 10) + 's';
+        document.body.appendChild(s);
+      }
+    })();
+
+    // 3D tilt effect on album covers
+    document.querySelectorAll('.album-cover').forEach(el => {
+      el.addEventListener('mousemove', e => {
+        const rect = el.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width - 0.5;
+        const y = (e.clientY - rect.top) / rect.height - 0.5;
+        el.style.setProperty('--rx', (-y * 12) + 'deg');
+        el.style.setProperty('--ry', (x * 12) + 'deg');
+      });
+      el.addEventListener('mouseleave', () => {
+        el.style.setProperty('--rx', '0deg');
+        el.style.setProperty('--ry', '0deg');
+      });
+    });
+
+    // Tilt effect also on stat cards
+    document.querySelectorAll('.stat-card').forEach(el => {
+      el.addEventListener('mousemove', e => {
+        const rect = el.getBoundingClientRect();
+        el.style.setProperty('--rx', ((-(e.clientY - rect.top) / rect.height + 0.5) * 8) + 'deg');
+        el.style.setProperty('--ry', (((e.clientX - rect.left) / rect.width - 0.5) * 8) + 'deg');
+      });
+      el.addEventListener('mouseleave', () => {
+        el.style.setProperty('--rx', '0deg');
+        el.style.setProperty('--ry', '0deg');
+      });
+    });
 
     // ==================== MUSIC ====================
     let musicPlaying = false;
