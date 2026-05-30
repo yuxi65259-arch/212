@@ -440,6 +440,15 @@
     <a href="#" data-section="jokes">梗百科</a>
   </nav>
 
+  <div id="namePrompt" style="display:none;position:fixed;inset:0;z-index:900;background:rgba(30,20,15,0.5);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:none;justify-content:center;align-items:center;">
+    <div style="background:var(--cream);border-radius:20px;padding:32px;max-width:340px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2);text-align:center;">
+      <p style="font-family:'Noto Serif SC',serif;font-size:20px;color:var(--deep);margin-bottom:4px;">👋 输入你的名字</p>
+      <p style="font-family:Inter,sans-serif;font-size:13px;color:var(--warm-brown);margin-bottom:20px;">让室友知道是谁</p>
+      <input id="nameInput" type="text" placeholder="输入名字..." maxlength="20" style="width:100%;padding:14px;border-radius:12px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.6);font-family:'Noto Serif SC',serif;font-size:15px;color:var(--deep);outline:none;text-align:center;" />
+      <button onclick="setName()" style="margin-top:14px;width:100%;padding:14px;border-radius:12px;border:none;background:var(--deep);color:#fff;font-family:Inter,sans-serif;font-size:14px;letter-spacing:2px;cursor:pointer;">确认</button>
+    </div>
+  </div>
+
   <!-- Music -->
   <button id="musicBtn" onclick="toggleMusic()">♫</button>
 
@@ -574,7 +583,7 @@
     ];
 
     // ==================== SPLASH ====================
-    function enterSite() {
+    function enterSite() { setTimeout(function() { if (!localStorage.getItem('dorm212_name')) showNamePrompt(); }, 600);
       document.getElementById('splash').classList.add('hidden');
       startCounters();
     }
@@ -710,7 +719,8 @@
       const newPhoto = {
         id: 'p' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
         cat: cat, url: rawUrl, api_url: apiUrl, label: label,
-        date: new Date().toISOString().slice(0, 10)
+        date: new Date().toISOString().slice(0, 10),
+        uploader: myName || ''
       };
       photos.push(newPhoto);
 
@@ -850,7 +860,7 @@
 
         const overlay = document.createElement('div');
         overlay.className = 'album-overlay';
-        overlay.textContent = photo.label || '无标题';
+        overlay.textContent = (photo.label || '无标题') + (photo.uploader ? ' - ' + photo.uploader : '');
         item.appendChild(overlay);
 
         if (!photo.isSample) {
@@ -878,7 +888,7 @@
           } else {
             img.style.display = 'none';
           }
-          cap.textContent = photo.label || '';
+          cap.textContent = (photo.label || '') + (photo.uploader ? '  -  ' + photo.uploader : '');
           cap.style.display = '';
         };
 
@@ -1041,7 +1051,7 @@
 
       const msg = {
         id: 'm' + Date.now(),
-        author: isAnon ? '匿名' : '我',
+        author: isAnon ? '匿名' : myName,
         time: dateStr,
         content: escapeHtml(text)
       };
@@ -1142,6 +1152,10 @@
       document.getElementById('musicBtn').textContent = musicPlaying ? '♬' : '♫';
     }
 
+    let myName = localStorage.getItem('dorm212_name') || '';
+    function showNamePrompt() { var p = document.getElementById('namePrompt'); if (p) p.style.display = 'flex'; }
+    function setName() { var inp = document.getElementById('nameInput'); var n = inp.value.trim(); if (!n) { inp.style.borderColor = '#e74c3c'; return; } myName = n; localStorage.setItem('dorm212_name', n); document.getElementById('namePrompt').style.display = 'none'; }
+    document.addEventListener('keydown', function(e) { if (e.key === 'Enter' && document.getElementById('namePrompt')?.style.display === 'flex') setName(); });
     // ==================== INIT ====================
     let allPhotos = [];
     let allMessages = [];
