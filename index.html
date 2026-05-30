@@ -855,20 +855,79 @@
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
 
     // ==================== MESSAGES ====================
-    function postMessage() {
+    async function loadMessages() {
+      try {
+        const resp = await fetch(API_BASE + '/messages.json', {
+          headers: { 'Authorization': 'token ' + GH_TOKEN }
+        });
+        if (!resp.ok) return [];
+        const data = await resp.json();
+        return JSON.parse(decodeURIComponent(escape(atob(data.content))));
+      } catch { return []; }
+    }
+
+    async function saveMessages(msgs) {
+      let sha;
+      try {
+        const existing = await fetch(API_BASE + '/messages.json', {
+          headers: { 'Authorization': 'token ' + GH_TOKEN }
+        });
+        if (existing.ok) sha = (await existing.json()).sha;
+      } catch(e) {}
+
+      const content = btoa(unescape(encodeURIComponent(JSON.stringify(msgs, null, 2))));
+      const body = { message: 'Update messages', content: content };
+      if (sha) body.sha = sha;
+      await fetch(API_BASE + '/messages.json', {
+        method: 'PUT',
+        headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    }
+
+    async function postMessage() {
       const input = document.getElementById('msgInput');
       const text = input.value.trim();
       if (!text) return;
       const isAnon = document.getElementById('anonCheck').checked;
-      const list = document.getElementById('msgList');
       const now = new Date();
       const dateStr = now.getFullYear() + '.' + String(now.getMonth()+1).padStart(2,'0') + '.' + String(now.getDate()).padStart(2,'0');
-      const card = document.createElement('div');
-      card.className = 'msg-card';
-      card.innerHTML = '<div class="msg-header"><span class="msg-author">' + (isAnon ? '匿名' : '我') + '</span><span class="msg-time">' + dateStr + '</span></div><div class="msg-content">' + escapeHtml(text) + '</div>';
-      list.prepend(card);
+
+      const msg = {
+        id: 'm' + Date.now(),
+        author: isAnon ? '匿名' : '我',
+        time: dateStr,
+        content: escapeHtml(text)
+      };
+
+      try {
+        const existing = await loadMessages();
+        existing.push(msg);
+        await saveMessages(existing);
+        renderMessages(existing);
+      } catch(e) {
+        // Fallback: show locally
+        const list = document.getElementById('msgList');
+        const card = document.createElement('div');
+        card.className = 'msg-card';
+        card.innerHTML = '<div class="msg-header"><span class="msg-author">' + msg.author + '</span><span class="msg-time">' + msg.time + '</span></div><div class="msg-content">' + msg.content + '</div>';
+        list.prepend(card);
+      }
+
       input.value = '';
     }
+
+    function renderMessages(msgs) {
+      const list = document.getElementById('msgList');
+      list.innerHTML = '';
+      msgs.slice().reverse().forEach(m => {
+        const card = document.createElement('div');
+        card.className = 'msg-card';
+        card.innerHTML = '<div class="msg-header"><span class="msg-author">' + m.author + '</span><span class="msg-time">' + m.time + '</span></div><div class="msg-content">' + m.content + '</div>';
+        list.appendChild(card);
+      });
+    }
+
     function escapeHtml(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
 
     // ==================== MUSIC ====================
@@ -881,10 +940,18 @@
 
     // ==================== INIT ====================
     let allPhotos = [];
+    let allMessages = [];
     (async function init() {
       try {
         const photos = await fetchPhotos();
         if (photos && photos.length) allPhotos = photos;
+      } catch(e) {}
+      try {
+        const msgs = await loadMessages();
+        if (msgs && msgs.length) {
+          allMessages = msgs;
+          renderMessages(msgs);
+        }
       } catch(e) {}
       renderAlbum();
     })();
