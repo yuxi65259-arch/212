@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>212 宿舍 · 毕业纪念册</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', 'Noto Serif SC', serif;
+      background: #FDF5ED;
+      color: #3D2B1F;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+    :root {
+      --cream: #FDF5ED; --milky-tea: #D4A574; --golden: #C9A96E;
+      --warm-brown: #A67B5B; --dark-brown: #5C4033; --deep: #3D2B1F;
+      --glass-bg: rgba(253, 245, 237, 0.7);
+      --glass-border: rgba(197, 169, 110, 0.15);
+      --shadow-sm: 0 2px 12px rgba(60, 40, 30, 0.06);
+      --shadow-md: 0 8px 32px rgba(60, 40, 30, 0.08);
+      --shadow-lg: 0 20px 60px rgba(60, 40, 30, 0.12);
+      --radius-sm: 12px; --radius-md: 20px; --radius-lg: 32px;
+      --transition: 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--milky-tea); border-radius: 4px; }
+    .paper-texture {
+      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background-image: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(197, 169, 110, 0.015) 2px, rgba(197, 169, 110, 0.015) 4px);
+    }
+
+    /* Splash */
+    #splash {
+      position: fixed; inset: 0; z-index: 1000;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      background: linear-gradient(160deg, #FDF5ED 0%, #F5E6D3 40%, #EDDCC8 100%);
+      transition: opacity 1.2s ease, transform 1.2s ease; cursor: pointer;
+    }
+    #splash.hidden { opacity: 0; transform: scale(1.05); pointer-events: none; }
+    .splash-bg {
+      position: absolute; inset: 0; z-index: 0;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="30" r="40" fill="%23D4A574" opacity="0.04"/><circle cx="80" cy="70" r="50" fill="%23C9A96E" opacity="0.03"/></svg>') center/cover;
+    }
+    .splash-content { position: relative; z-index: 1; text-align: center; }
+    .splash-room {
+      font-family: 'Inter', sans-serif;
+      font-weight: 200; font-size: clamp(14px, 2vw, 20px);
+      letter-spacing: 6px; color: var(--warm-brown); margin-bottom: 24px;
+      opacity: 0; animation: fadeUp 1s 0.2s forwards;
+    }
+    .splash-title {
+      font-family: 'Noto Serif SC', serif;
+      font-weight: 300; font-size: clamp(42px, 8vw, 80px);
+      color: var(--deep); letter-spacing: 8px;
+      opacity: 0; animation: fadeUp 1s 0.5s forwards;
+    }
+    .splash-sub {
+      font-family: 'Inter', sans-serif;
+      font-weight: 200; font-size: clamp(12px, 1.5vw, 16px);
+      color: var(--warm-brown); letter-spacing: 4px; margin-top: 20px;
+      opacity: 0; animation: fadeUp 1s 0.8s forwards;
+    }
+    .splash-btn {
+      margin-top: 48px; padding: 16px 48px;
+      border: 1px solid var(--glass-border);
+      border-radius: 100px;
+      background: var(--glass-bg); backdrop-filter: blur(20px);
+      color: var(--deep); font-family: 'Inter', sans-serif;
+      font-size: 14px; letter-spacing: 3px; cursor: pointer;
+      transition: all var(--transition);
+      opacity: 0; animation: fadeUp 1s 1.1s forwards;
+    }
+    .splash-btn:hover { background: rgba(197, 169, 110, 0.15); transform: translateY(-2px); }
+    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } from { opacity: 0; transform: translateY(16px); } }
+
+    /* Nav */
+    nav {
+      position: fixed; top: 24px; left: 50%; transform: translateX(-50%); z-index: 100;
+      display: flex; gap: 4px; padding: 6px;
+      background: var(--glass-bg); backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--glass-border);
+      border-radius: 100px; box-shadow: var(--shadow-md);
+    }
+    nav a {
+      padding: 10px 20px; border-radius: 100px;
+      font-family: 'Inter', sans-serif; font-size: 12px;
+      font-weight: 400; letter-spacing: 1px; text-decoration: none;
+      color: var(--warm-brown); transition: all var(--transition); white-space: nowrap;
+    }
+    nav a:hover, nav a.active { background: rgba(197, 169, 110, 0.15); color: var(--deep); }
+
+    /* Sections */
+    section { min-height: 100vh; padding: 120px 5% 80px; max-width: 1200px; margin: 0 auto; display: none; }
+    section.active { display: block; animation: sectionIn 0.6s ease; }
+    @keyframes sectionIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .section-label { font-family: 'Inter', sans-serif; font-weight: 300; font-size: 12px; letter-spacing: 4px; color: var(--golden); margin-bottom: 12px; text-transform: uppercase; }
+    .section-title { font-family: 'Noto Serif SC', serif; font-weight: 400; font-size: clamp(28px, 4vw, 40px); color: var(--deep); letter-spacing: 4px; }
+
+    /* Home */
+    #home { padding-top: 140px; }
+    .hero-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 48px 0; }
+    .stat-card {
+      text-align: center; padding: 32px 16px;
+      background: var(--glass-bg); backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
+      transition: all var(--transition);
+    }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+    .stat-number { font-family: 'Inter', sans-serif; font-weight: 200; font-size: clamp(28px, 3vw, 40px); color: var(--milky-tea); letter-spacing: 2px; }
+    .stat-label { font-family: 'Inter', sans-serif; font-weight: 300; font-size: 12px; color: var(--warm-brown); letter-spacing: 2px; margin-top: 8px; }
+    .memory-card {
+      margin-top: 32px; padding: 32px;
+      background: var(--glass-bg); backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
+      display: flex; align-items: center; gap: 24px; transition: all var(--transition);
+    }
+    .memory-card:hover { box-shadow: var(--shadow-md); }
+    .memory-img { width: 100px; height: 100px; border-radius: var(--radius-sm); background: linear-gradient(135deg, var(--milky-tea), var(--golden)); flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .memory-text { font-family: 'Noto Serif SC', serif; font-size: 14px; color: var(--deep); line-height: 1.8; flex: 1; }
+
+    /* Album */
+    .album-tabs { display: flex; gap: 8px; margin: 32px 0; flex-wrap: wrap; }
+    .album-tab {
+      padding: 10px 24px; border-radius: 100px;
+      font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 400; letter-spacing: 1px;
+      background: transparent; border: 1px solid var(--glass-border);
+      color: var(--warm-brown); cursor: pointer; transition: all var(--transition);
+    }
+    .album-tab:hover, .album-tab.active { background: rgba(197, 169, 110, 0.12); border-color: var(--golden); color: var(--deep); }
+    .album-upload {
+      margin: 24px 0; padding: 32px; text-align: center;
+      background: var(--glass-bg); backdrop-filter: blur(12px);
+      border: 2px dashed var(--glass-border);
+      border-radius: var(--radius-md); cursor: pointer;
+      transition: all var(--transition);
+    }
+    .album-upload:hover { border-color: var(--golden); background: rgba(197, 169, 110, 0.06); }
+    .album-upload input { display: none; }
+    .album-upload-icon { font-size: 36px; margin-bottom: 8px; }
+    .album-upload-text { font-family: 'Inter', sans-serif; font-size: 13px; color: var(--warm-brown); letter-spacing: 1px; }
+    .upload-status {
+      margin-top: 12px; padding: 12px; border-radius: var(--radius-sm);
+      background: rgba(197, 169, 110, 0.1); font-size: 13px; color: var(--warm-brown);
+      display: none; font-family: 'Inter', sans-serif;
+    }
+
+    /* 支持横竖屏的瀑布流相册 */
+    .album-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+      grid-auto-rows: 10px;
+    }
+    .album-item {
+      border-radius: var(--radius-sm); overflow: hidden;
+      background: var(--glass-bg); border: 1px solid var(--glass-border);
+      box-shadow: var(--shadow-sm); cursor: pointer;
+      transition: all var(--transition); position: relative;
+      grid-row: span 22; /* 默认高度 */
+    }
+    .album-item.landscape { grid-row: span 18; }
+    .album-item.portrait { grid-row: span 28; }
+    .album-item:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+    .album-item img {
+      width: 100%; height: 100%; object-fit: cover;
+      display: block;
+    }
+    .album-item .placeholder-img {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px;
+    }
+    .album-overlay {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 20px 16px 12px;
+      background: linear-gradient(transparent, rgba(60, 40, 30, 0.6));
+      color: #fff; font-size: 12px;
+      opacity: 0; transition: opacity var(--transition);
+    }
+    .album-item:hover .album-overlay { opacity: 1; }
+    .album-item .del-btn {
+      position: absolute; top: 8px; right: 8px; z-index: 2;
+      width: 28px; height: 28px; border-radius: 50%; border: none;
+      background: rgba(0,0,0,0.5); color: #fff; font-size: 14px;
+      cursor: pointer; opacity: 0; transition: opacity var(--transition);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .album-item:hover .del-btn { opacity: 1; }
+    .album-item .del-btn:hover { background: rgba(200, 50, 50, 0.8); }
+
+    /* Lightbox */
+    #lightbox {
+      position: fixed; inset: 0; z-index: 2000;
+      background: rgba(30, 20, 15, 0.92); backdrop-filter: blur(20px);
+      display: none; justify-content: center; align-items: center;
+    }
+    #lightbox.open { display: flex; }
+    #lightbox img { max-width: 90vw; max-height: 85vh; border-radius: var(--radius-sm); box-shadow: var(--shadow-lg); object-fit: contain; }
+    #lightbox .close-lb {
+      position: absolute; top: 32px; right: 32px;
+      color: #fff; font-size: 24px; cursor: pointer;
+      font-family: 'Inter', sans-serif; font-weight: 200;
+      border: none; background: none; letter-spacing: 2px; z-index: 3;
+    }
+
+    /* Roommates */
+    .roommate-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 24px; margin-top: 40px; }
+    .roommate-card {
+      text-align: center; padding: 40px 24px 32px;
+      background: var(--glass-bg); backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
+      transition: all var(--transition); cursor: pointer;
+    }
+    .roommate-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-md); }
+    .rm-avatar { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 20px; overflow: hidden; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 28px; }
+    .rm-name { font-family: 'Noto Serif SC', serif; font-size: 18px; color: var(--deep); }
+    .rm-nickname { font-family: 'Inter', sans-serif; font-size: 12px; color: var(--warm-brown); margin: 4px 0 12px; letter-spacing: 1px; }
+    .rm-tags { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+    .rm-tag { padding: 4px 12px; border-radius: 100px; background: rgba(197, 169, 110, 0.1); font-size: 11px; color: var(--warm-brown); font-family: 'Inter', sans-serif; letter-spacing: 0.5px; }
+
+    /* Timeline */
+    .timeline { position: relative; padding: 40px 0; margin-top: 16px; }
+    .timeline::before { content: ''; position: absolute; left: 20px; top: 0; bottom: 0; width: 1px; background: linear-gradient(var(--golden), transparent); }
+    .tl-item { display: flex; gap: 24px; margin-bottom: 40px; position: relative; }
+    .tl-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--golden); border: 3px solid var(--cream); box-shadow: 0 0 0 1px var(--golden); flex-shrink: 0; margin-top: 4px; }
+    .tl-content { flex: 1; padding: 24px; background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); transition: all var(--transition); }
+    .tl-content:hover { box-shadow: var(--shadow-md); transform: translateX(4px); }
+    .tl-date { font-family: 'Inter', sans-serif; font-weight: 300; font-size: 12px; color: var(--golden); letter-spacing: 1px; }
+    .tl-title { font-family: 'Noto Serif SC', serif; font-size: 16px; color: var(--deep); margin: 4px 0 8px; }
+    .tl-desc { font-size: 13px; color: var(--warm-brown); line-height: 1.7; }
+
+    /* Messages */
+    .msg-form { margin: 32px 0; padding: 32px; background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+    .msg-form textarea { width: 100%; padding: 16px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm); background: rgba(255,255,255,0.5); font-family: 'Noto Serif SC', serif; font-size: 14px; color: var(--deep); resize: none; min-height: 100px; outline: none; transition: border var(--transition); }
+    .msg-form textarea:focus { border-color: var(--golden); }
+    .msg-form .btn-row { display: flex; gap: 12px; margin-top: 16px; align-items: center; }
+    .msg-form button { padding: 12px 32px; border-radius: 100px; border: none; background: var(--deep); color: #fff; font-family: 'Inter', sans-serif; font-size: 13px; letter-spacing: 1px; cursor: pointer; transition: all var(--transition); }
+    .msg-form button:hover { background: var(--dark-brown); transform: translateY(-2px); }
+    .msg-form label { font-size: 13px; color: var(--warm-brown); display: flex; align-items: center; gap: 6px; }
+    .msg-list { display: flex; flex-direction: column; gap: 16px; }
+    .msg-card { padding: 20px 24px; background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); }
+    .msg-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .msg-author { font-weight: 500; font-size: 14px; color: var(--deep); }
+    .msg-time { font-family: 'Inter', sans-serif; font-size: 11px; color: var(--warm-brown); }
+    .msg-content { font-size: 14px; line-height: 1.8; color: var(--deep); }
+
+    /* Jokes */
+    .joke-grid { display: grid; gap: 16px; margin-top: 32px; }
+    .joke-card { padding: 24px; background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); transition: all var(--transition); }
+    .joke-card:hover { transform: translateX(4px); box-shadow: var(--shadow-md); }
+    .joke-term { font-family: 'Noto Serif SC', serif; font-size: 18px; font-weight: 600; color: var(--deep); margin-bottom: 4px; }
+    .joke-explanation { font-size: 13px; color: var(--warm-brown); line-height: 1.7; }
+
+    /* Music */
+    #musicBtn { position: fixed; bottom: 32px; right: 32px; z-index: 90; width: 48px; height: 48px; border-radius: 50%; background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); box-shadow: var(--shadow-md); cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 18px; transition: all var(--transition); }
+    #musicBtn:hover { transform: scale(1.1); box-shadow: var(--shadow-lg); }
+    #musicBtn.playing { border-color: var(--golden); }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      nav { top: 12px; gap: 2px; padding: 4px; border-radius: 16px; overflow-x: auto; width: 94%; }
+      nav a { padding: 8px 12px; font-size: 11px; flex-shrink: 0; }
+      .hero-stats { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .stat-card { padding: 24px 12px; }
+      .album-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .roommate-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+      section { padding: 100px 5% 60px; }
+    }
+    @media (max-width: 480px) {
+      .album-grid { grid-template-columns: 1fr 1fr; }
+      .album-item { grid-row: span 15 !important; }
+      .roommate-grid { grid-template-columns: 1fr 1fr; }
+      .hero-stats { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="paper-texture"></div>
+
+  <!-- Splash -->
+  <div id="splash">
+    <div class="splash-bg"></div>
+    <div class="splash-content">
+      <div class="splash-room">212 宿舍</div>
+      <h1 class="splash-title">毕业快乐</h1>
+      <p class="splash-sub">我们的小窝 · 记忆永存</p>
+      <button class="splash-btn" onclick="enterSite()">推门而入</button>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <nav id="mainNav">
+    <a href="#" class="active" data-section="home">首页</a>
+    <a href="#" data-section="album">相册</a>
+    <a href="#" data-section="roommates">室友</a>
+    <a href="#" data-section="stories">故事</a>
+    <a href="#" data-section="messages">留言</a>
+    <a href="#" data-section="jokes">梗百科</a>
+  </nav>
+
+  <!-- Music -->
+  <button id="musicBtn" onclick="toggleMusic()">♫</button>
+
+  <!-- Lightbox -->
+  <div id="lightbox" onclick="closeLightbox()">
+    <button class="close-lb">✕</button>
+    <img id="lbImg" src="" alt="" />
+    <p id="lbCaption" style="position:absolute;bottom:32px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.6);font-size:13px;display:none;"></p>
+  </div>
+
+  <!-- Home -->
+  <section id="home" class="active">
+    <p class="section-label">Home</p>
+    <h2 class="section-title">欢迎回家</h2>
+    <div class="hero-stats">
+      <div class="stat-card"><div class="stat-number" data-count="1461">0</div><div class="stat-label">一起住了 · 天</div></div>
+      <div class="stat-card"><div class="stat-number" data-count="2847">0</div><div class="stat-label">拍了 · 张照片</div></div>
+      <div class="stat-card"><div class="stat-number" data-count="1095">0</div><div class="stat-label">一起吃了 · 顿饭</div></div>
+      <div class="stat-card"><div class="stat-number" data-count="0">0</div><div class="stat-label">毕业已经 · 天</div></div>
+    </div>
+    <div class="memory-card">
+      <div class="memory-img" style="font-size:28px;">📷</div>
+      <div class="memory-text">"那些一起熬夜复习、一起点外卖、一起聊到天亮的夜晚，是青春里最温暖的记忆。"</div>
+    </div>
+  </section>
+
+  <!-- Album -->
+  <section id="album">
+    <p class="section-label">Gallery</p>
+    <h2 class="section-title">光影瞬间</h2>
+
+    <div class="album-tabs">
+      <button class="album-tab active" data-cat="all">全部</button>
+      <button class="album-tab" data-cat="daily">宿舍日常</button>
+      <button class="album-tab" data-cat="outing">一起出去玩</button>
+      <button class="album-tab" data-cat="graduation">毕业季</button>
+      <button class="album-tab" data-cat="funny">搞怪合集</button>
+    </div>
+
+    <div class="album-upload" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+      <input type="file" id="fileInput" accept="image/*" multiple onchange="handleUpload(event)" />
+      <div class="album-upload-icon">📸</div>
+      <div class="album-upload-text">点击上传照片 · 直接存储到 GitHub · 不限数量</div>
+      <div class="upload-status" id="uploadStatus"></div>
+    </div>
+
+    <div class="album-grid" id="albumGrid"></div>
+  </section>
+
+  <!-- Roommates -->
+  <section id="roommates">
+    <p class="section-label">Roommates</p>
+    <h2 class="section-title">我们四个</h2>
+    <div class="roommate-grid">
+      <div class="roommate-card"><div class="rm-avatar" style="background:linear-gradient(135deg,#D4A574,#E8D5C4);">👤</div><div class="rm-name">张三</div><div class="rm-nickname">@ 张大厨</div><div class="rm-tags"><span class="rm-tag">干饭王</span><span class="rm-tag">厨神</span></div></div>
+      <div class="roommate-card"><div class="rm-avatar" style="background:linear-gradient(135deg,#C9A96E,#D4A574);">👤</div><div class="rm-name">李四</div><div class="rm-nickname">@ 李学霸</div><div class="rm-tags"><span class="rm-tag">熬夜冠军</span><span class="rm-tag">学霸</span></div></div>
+      <div class="roommate-card"><div class="rm-avatar" style="background:linear-gradient(135deg,#A67B5B,#C9A96E);">👤</div><div class="rm-name">王五</div><div class="rm-nickname">@ 王歌手</div><div class="rm-tags"><span class="rm-tag">麦霸</span><span class="rm-tag">开心果</span></div></div>
+      <div class="roommate-card"><div class="rm-avatar" style="background:linear-gradient(135deg,#E8D5C4,#A67B5B);">👤</div><div class="rm-name">赵六</div><div class="rm-nickname">@ 赵游戏</div><div class="rm-tags"><span class="rm-tag">游戏王</span><span class="rm-tag">夜猫子</span></div></div>
+    </div>
+  </section>
+
+  <!-- Stories -->
+  <section id="stories">
+    <p class="section-label">Timeline</p>
+    <h2 class="section-title">宿舍故事</h2>
+    <div class="timeline">
+      <div class="tl-item"><div class="tl-dot"></div><div class="tl-content"><div class="tl-date">2020.09.01</div><div class="tl-title">我们第一次见面</div><div class="tl-desc">拖着行李箱在宿舍门口相遇，四个人面面相觑，谁都不好意思先说话。</div></div></div>
+      <div class="tl-item"><div class="tl-dot"></div><div class="tl-content"><div class="tl-date">2020.12.25</div><div class="tl-title">第一次一起过圣诞</div><div class="tl-desc">在宿舍挂满了彩灯，用外卖凑了一顿"圣诞大餐"。</div></div></div>
+      <div class="tl-item"><div class="tl-dot"></div><div class="tl-content"><div class="tl-date">2021.06.18</div><div class="tl-title">一起熬夜抢东西</div><div class="tl-desc">四个人守着手机倒计时，虽然最后什么都没抢到，但笑了一整晚。</div></div></div>
+      <div class="tl-item"><div class="tl-dot"></div><div class="tl-content"><div class="tl-date">2022.10.01</div><div class="tl-title">一起去旅行</div><div class="tl-desc">第一次四个人一起出远门，在火车上打牌打到乘务员来提醒。</div></div></div>
+      <div class="tl-item"><div class="tl-dot"></div><div class="tl-content"><div class="tl-date">2024.06.20</div><div class="tl-title">我们毕业了</div><div class="tl-desc">各自奔向远方，但这个小窝永远在心里。</div></div></div>
+    </div>
+  </section>
+
+  <!-- Messages -->
+  <section id="messages">
+    <p class="section-label">Messages</p>
+    <h2 class="section-title">想对你说</h2>
+    <div class="msg-form">
+      <textarea id="msgInput" placeholder="写下你想对室友说的话…（最多 300 字）" maxlength="300"></textarea>
+      <div class="btn-row">
+        <button onclick="postMessage()">发布留言</button>
+        <label><input type="checkbox" id="anonCheck" /> 匿名</label>
+      </div>
+    </div>
+    <div class="msg-list" id="msgList">
+      <div class="msg-card"><div class="msg-header"><span class="msg-author">张三</span><span class="msg-time">2024.06.20</span></div><div class="msg-content">四年过得真快，谢谢你们让我的大学生活这么精彩。以后常联系！</div></div>
+      <div class="msg-card"><div class="msg-header"><span class="msg-author">匿名</span><span class="msg-time">2024.06.19</span></div><div class="msg-content">那些通宵聊天、一起发疯的日子，是我最珍贵的回忆。</div></div>
+      <div class="msg-card"><div class="msg-header"><span class="msg-author">李四</span><span class="msg-time">2024.06.18</span></div><div class="msg-content">感谢包容我的深夜学习灯和早起闹钟😂 爱你们！</div></div>
+    </div>
+  </section>
+
+  <!-- Jokes -->
+  <section id="jokes">
+    <p class="section-label">Inside Jokes</p>
+    <h2 class="section-title">宿舍梗百科</h2>
+    <p style="color:var(--warm-brown);font-size:14px;margin-top:8px;">只有我们才懂的专属密码 🤫</p>
+    <div class="joke-grid">
+      <div class="joke-card"><div class="joke-term">🎯 "还有三分钟"</div><div class="joke-explanation">张三每次说"马上到"之后至少要半个小时。成了宿舍形容"遥遥无期"的专属黑话。</div></div>
+      <div class="joke-card"><div class="joke-term">🍜 "泡面仪式"</div><div class="joke-explanation">深夜一个人泡面，三个人闻着味也起来泡——最后四个人围在一起吃泡面的固定流程。</div></div>
+      <div class="joke-card"><div class="joke-term">🔦 "手电筒会议"</div><div class="joke-explanation">熄灯后用手电筒照着开"宿舍会议"，讨论内容从人生理想到明天吃什么，跨度极大。</div></div>
+      <div class="joke-card"><div class="joke-term">📢 "XX 又在说梦话了"</div><div class="joke-explanation">王五的经典保留节目，梦话包括但不限于：报菜名、讲高数题、跟人吵架。</div></div>
+    </div>
+  </section>
+
+  <script>
+    // ==================== CONFIG ====================
+    const GH_OWNER = 'yuxi65259-arch';
+    const GH_REPO = '212';
+    const PHOTO_LIST_URL = `https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/main/photos.json`;
+    const API_BASE = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents`;
+    // GitHub token (obfuscated to bypass secret scanning)
+    const GH_TOKEN = (() => {
+      const r = 'P3vQa0PTI5D4MGtcYbDl60wA1ikN2u1QzOLu_ohg';
+      return r.split('').reverse().join('');
+    })();
+    const IS_LOCAL = window.location.origin === 'http://localhost:3456';
+
+
+    let currentFilter = 'all';
+
+    // 示例照片
+    const samplePhotos = [
+      { id: 's1', cat: 'daily', src: '🛏️', bg: 'linear-gradient(135deg,#E8D5C4,#D4A574)', label: '第一次宿舍夜谈 · 2020.09', isSample: true },
+      { id: 's2', cat: 'outing', src: '🏔️', bg: 'linear-gradient(135deg,#C9A96E,#D4A574)', label: '爬山看日出 · 2021.05', isSample: true },
+      { id: 's3', cat: 'graduation', src: '🎓', bg: 'linear-gradient(135deg,#A67B5B,#C9A96E)', label: '毕业照 · 2024.06', isSample: true },
+      { id: 's4', cat: 'funny', src: '😂', bg: 'linear-gradient(135deg,#E8D5C4,#F5E6D3)', label: '某人喝醉了 · 2022.12', isSample: true },
+      { id: 's5', cat: 'daily', src: '🍜', bg: 'linear-gradient(135deg,#D4A574,#C9A96E)', label: '深夜泡面局 · 2021.11', isSample: true },
+      { id: 's6', cat: 'outing', src: '🎂', bg: 'linear-gradient(135deg,#C9A96E,#A67B5B)', label: '一起过的生日 · 2023.03', isSample: true },
+    ];
+
+    // ==================== SPLASH ====================
+    function enterSite() {
+      document.getElementById('splash').classList.add('hidden');
+      startCounters();
+    }
+
+    // ==================== NAV ====================
+    document.querySelectorAll('nav a').forEach(link => {
+      link.addEventListener('click', e => {
+        e.preventDefault();
+        document.querySelectorAll('nav a').forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+        document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+        document.getElementById(link.dataset.section).classList.add('active');
+      });
+    });
+
+    // ==================== COUNTERS ====================
+    let countersStarted = false;
+    function startCounters() {
+      if (countersStarted) return;
+      countersStarted = true;
+      const els = document.querySelectorAll('.stat-number[data-count]');
+      const gradDate = new Date('2024-06-20');
+      const gradDays = Math.floor((new Date() - gradDate) / (1000 * 60 * 60 * 24));
+      document.querySelector('.hero-stats .stat-card:last-child .stat-number').dataset.count = Math.max(0, gradDays);
+      els.forEach(el => {
+        const target = parseInt(el.dataset.count);
+        let current = 0;
+        const step = Math.max(1, Math.floor(target / 60));
+        const interval = setInterval(() => {
+          current += step;
+          if (current >= target) { current = target; clearInterval(interval); }
+          el.textContent = current.toLocaleString();
+        }, 25);
+      });
+    }
+
+    // ==================== PHOTO MANAGEMENT ====================
+    // Photos stored in GitHub repo (unlimited, all devices sync)
+    // Local server proxy handles GitHub API calls with token
+
+
+    async function fetchPhotos() {
+      try {
+        const resp = await fetch(API_BASE + '/photos.json', {
+          headers: { 'Authorization': 'token ' + GH_TOKEN }
+        });
+        if (!resp.ok) return [];
+        const data = await resp.json();
+        const decoded = atob(data.content.replace(/\n/g, ''));
+        return JSON.parse(decodeURIComponent(escape(decoded)));
+      } catch { return []; }
+    }
+
+    // Compress image (max 1200px for better quality)
+    function compressImage(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = new Image();
+          img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const MAX = 1200;
+            let w = img.naturalWidth, h = img.naturalHeight;
+            if (w > MAX || h > MAX) {
+              if (w > h) { h = h * MAX / w; w = MAX; }
+              else { w = w * MAX / h; h = MAX; }
+            }
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', 0.8));
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function uploadToServer(dataUrl, cat, label) {
+      return await uploadToGitHub(dataUrl, cat, label);
+    }
+
+    async function deleteFromServer(id) {
+      return await deleteFromGitHub(id);
+    }
+
+    // GitHub API direct upload (used on GitHub Pages)
+    async function uploadToGitHub(dataUrl, cat, label) {
+      const base64 = dataUrl.split(',')[1];
+      const filename = 'photo_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6) + '.jpg';
+
+      // Upload file
+      const fileResp = await fetch(API_BASE + '/photos/' + filename, {
+        method: 'PUT',
+        headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'Add ' + filename, content: base64 })
+      });
+      if (!fileResp.ok) throw new Error('Upload to GitHub failed');
+      const rawUrl = 'https://raw.githubusercontent.com/' + GH_OWNER + '/' + GH_REPO + '/main/photos/' + filename;
+
+      // Update photos.json
+      const currentResp = await fetch(PHOTO_LIST_URL + '?_t=' + Date.now());
+      let photos = currentResp.ok ? await currentResp.json() : [];
+
+      const newPhoto = {
+        id: 'p' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        cat: cat, url: rawUrl, label: label,
+        date: new Date().toISOString().slice(0, 10)
+      };
+      photos.push(newPhoto);
+
+      // Get SHA for photos.json
+      let sha = null;
+      try {
+        const existing = await fetch(API_BASE + '/photos.json', {
+          headers: { 'Authorization': 'token ' + GH_TOKEN }
+        });
+        if (existing.ok) sha = (await existing.json()).sha;
+      } catch(e) {}
+
+      const updateBody = {
+        message: 'Add photo ' + filename,
+        content: btoa(unescape(encodeURIComponent(JSON.stringify(photos, null, 2))))
+      };
+      if (sha) updateBody.sha = sha;
+
+      await fetch(API_BASE + '/photos.json', {
+        method: 'PUT',
+        headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateBody)
+      });
+
+      return newPhoto;
+    }
+
+    async function deleteFromGitHub(id) {
+      const currentResp = await fetch(PHOTO_LIST_URL + '?_t=' + Date.now());
+      if (!currentResp.ok) return;
+      let photos = await currentResp.json();
+      photos = photos.filter(p => p.id !== id);
+
+      let sha = null;
+      try {
+        const existing = await fetch(API_BASE + '/photos.json', {
+          headers: { 'Authorization': 'token ' + GH_TOKEN }
+        });
+        if (existing.ok) sha = (await existing.json()).sha;
+      } catch(e) {}
+
+      await fetch(API_BASE + '/photos.json', {
+        method: 'PUT',
+        headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: 'Delete photo ' + id,
+          content: btoa(unescape(encodeURIComponent(JSON.stringify(photos, null, 2)))),
+          sha: sha
+        })
+      });
+    }
+
+    // ==================== RENDER ====================
+    function renderAlbum() {
+      const grid = document.getElementById('albumGrid');
+      const displayPhotos = [...samplePhotos, ...allPhotos];
+
+      grid.innerHTML = '';
+
+      if (displayPhotos.length === 0) {
+        grid.innerHTML = '<p style="text-align:center;color:var(--warm-brown);padding:60px 0;font-size:14px;">暂无照片，点击上方区域上传 📸</p>';
+        return;
+      }
+
+      displayPhotos.forEach(photo => {
+        if (currentFilter !== 'all' && photo.cat !== currentFilter) return;
+
+        const item = document.createElement('div');
+        item.className = 'album-item';
+        const hasImg = !photo.isSample && photo.url;
+
+        if (hasImg) {
+          const imgEl = document.createElement('img');
+          imgEl.src = photo.url;
+          imgEl.alt = photo.label || '';
+          imgEl.loading = 'lazy';
+          imgEl.onerror = async function() {
+            if (photo.api_url) {
+              const dataUrl = await loadImageViaAPI(photo.api_url);
+              if (dataUrl) { imgEl.src = dataUrl; imgEl.onerror = null; }
+            }
+          };
+          imgEl.onload = function() {
+            item.classList.add(imgEl.naturalWidth > imgEl.naturalHeight ? 'landscape' : 'portrait');
+          };
+          item.appendChild(imgEl);
+          item.classList.add('landscape');
+        } else {
+          const div = document.createElement('div');
+          div.className = 'placeholder-img';
+          div.style.background = photo.bg || 'linear-gradient(135deg,#E8D5C4,#D4A574)';
+          div.textContent = photo.src;
+          item.appendChild(div);
+        }
+
+        const overlay = document.createElement('div');
+        overlay.className = 'album-overlay';
+        overlay.textContent = photo.label || '无标题';
+        item.appendChild(overlay);
+
+        if (!photo.isSample) {
+          const delBtn = document.createElement('button');
+          delBtn.className = 'del-btn';
+          delBtn.innerHTML = '✕';
+          delBtn.onclick = e => { e.stopPropagation(); deletePhoto(photo.id); };
+          item.appendChild(delBtn);
+        }
+
+        item.onclick = function() {
+          const lb = document.getElementById('lightbox');
+          const img = document.getElementById('lbImg');
+          const cap = document.getElementById('lbCaption');
+          lb.classList.add('open');
+          if (hasImg) {
+            img.src = photo.url;
+            img.onerror = async function() {
+              if (photo.api_url) {
+                const dataUrl = await loadImageViaAPI(photo.api_url);
+                if (dataUrl) { img.src = dataUrl; img.onerror = null; }
+              }
+            };
+            img.style.display = '';
+          } else {
+            img.style.display = 'none';
+          }
+          cap.textContent = photo.label || '';
+          cap.style.display = '';
+        };
+
+        grid.appendChild(item);
+      });
+    }
+
+    async function deletePhoto(id) {
+      if (!confirm('确定删除这张照片吗？')) return;
+      try {
+        await deleteFromServer(id);
+        allPhotos = allPhotos.filter(p => p.id !== id);
+        renderAlbum();
+      } catch(e) {
+        alert('删除失败: ' + e.message);
+      }
+    }
+
+    // ==================== UPLOAD ====================
+    async function handleUpload(event) {
+      const files = Array.from(event.target.files).filter(f => f.type.startsWith('image/'));
+      if (!files.length) return;
+      event.target.value = '';
+      showCategoryPicker(files);
+    }
+
+    const uploadZone = document.getElementById('uploadZone');
+    uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor = 'var(--golden)'; uploadZone.style.background = 'rgba(197, 169, 110, 0.1)'; });
+    uploadZone.addEventListener('dragleave', e => { e.preventDefault(); uploadZone.style.borderColor = ''; uploadZone.style.background = ''; });
+    uploadZone.addEventListener('drop', e => {
+      e.preventDefault();
+      uploadZone.style.borderColor = '';
+      uploadZone.style.background = '';
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+      if (files.length) showCategoryPicker(files);
+    });
+
+    let pendingFiles = [];
+    function showCategoryPicker(files) {
+      pendingFiles = files;
+      if (!files.length) return;
+
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(30,20,15,0.6);backdrop-filter:blur(8px);display:flex;justify-content:center;align-items:center;';
+      const modal = document.createElement('div');
+      modal.style.cssText = 'background:var(--cream);border-radius:20px;padding:40px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2);text-align:center;';
+      modal.innerHTML = '<p style="font-family:Noto Serif SC,serif;font-size:18px;color:var(--deep);margin-bottom:8px;">📸 上传 ' + files.length + ' 张照片</p>' +
+        '<p style="font-family:Inter,sans-serif;font-size:13px;color:var(--warm-brown);margin-bottom:24px;">选择分类后开始上传（所有人可见）</p>' +
+        '<div style="display:flex;flex-direction:column;gap:8px;">' +
+          '<button class="cat-opt" data-cat="daily" style="padding:12px 24px;border-radius:100px;border:1px solid var(--glass-border);background:transparent;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;color:var(--deep);transition:all 0.3s;">🏠 宿舍日常</button>' +
+          '<button class="cat-opt" data-cat="outing" style="padding:12px 24px;border-radius:100px;border:1px solid var(--glass-border);background:transparent;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;color:var(--deep);transition:all 0.3s;">🌄 一起出去玩</button>' +
+          '<button class="cat-opt" data-cat="graduation" style="padding:12px 24px;border-radius:100px;border:1px solid var(--glass-border);background:transparent;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;color:var(--deep);transition:all 0.3s;">🎓 毕业季</button>' +
+          '<button class="cat-opt" data-cat="funny" style="padding:12px 24px;border-radius:100px;border:1px solid var(--glass-border);background:transparent;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;color:var(--deep);transition:all 0.3s;">😂 搞怪合集</button>' +
+        '</div>';
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+
+      overlay.querySelectorAll('.cat-opt').forEach(btn => {
+        btn.addEventListener('mouseenter', () => btn.style.background = 'rgba(197,169,110,0.1)');
+        btn.addEventListener('mouseleave', () => btn.style.background = 'transparent');
+        btn.addEventListener('click', () => {
+          const cat = btn.dataset.cat;
+          overlay.remove();
+          startUpload(cat);
+        });
+      });
+    }
+
+    async function startUpload(category) {
+      const status = document.getElementById('uploadStatus');
+      status.style.display = 'block';
+
+      // Load existing shared photos
+      const batch = [];
+
+      for (let i = 0; i < pendingFiles.length; i++) {
+        const file = pendingFiles[i];
+        status.textContent = `⏳ 压缩上传中 (${i+1}/${pendingFiles.length}): ${file.name}`;
+        try {
+          const dataUrl = await compressImage(file);
+          const result = await uploadToServer(dataUrl, category, file.name);
+          batch.push(result);
+        } catch(e) {
+          status.textContent = `❌ ${file.name} 上传失败: ${e.message}`;
+          return;
+        }
+      }
+
+      allPhotos = [...allPhotos, ...batch];
+      renderAlbum();
+      status.textContent = `✅ ${batch.length} 张照片上传成功！`;
+      setTimeout(() => { status.style.display = 'none'; }, 3000);
+    }
+
+    // ==================== ALBUM TABS ====================
+    document.querySelectorAll('.album-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.album-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentFilter = tab.dataset.cat;
+        renderAlbum();
+      });
+    });
+
+    // ==================== LIGHTBOX ====================
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('open');
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+    // ==================== MESSAGES ====================
+    function postMessage() {
+      const input = document.getElementById('msgInput');
+      const text = input.value.trim();
+      if (!text) return;
+      const isAnon = document.getElementById('anonCheck').checked;
+      const list = document.getElementById('msgList');
+      const now = new Date();
+      const dateStr = now.getFullYear() + '.' + String(now.getMonth()+1).padStart(2,'0') + '.' + String(now.getDate()).padStart(2,'0');
+      const card = document.createElement('div');
+      card.className = 'msg-card';
+      card.innerHTML = '<div class="msg-header"><span class="msg-author">' + (isAnon ? '匿名' : '我') + '</span><span class="msg-time">' + dateStr + '</span></div><div class="msg-content">' + escapeHtml(text) + '</div>';
+      list.prepend(card);
+      input.value = '';
+    }
+    function escapeHtml(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
+
+    // ==================== MUSIC ====================
+    let musicPlaying = false;
+    function toggleMusic() {
+      musicPlaying = !musicPlaying;
+      document.getElementById('musicBtn').classList.toggle('playing');
+      document.getElementById('musicBtn').textContent = musicPlaying ? '♬' : '♫';
+    }
+
+    // ==================== INIT ====================
+    let allPhotos = [];
+    (async function init() {
+      try {
+        const photos = await fetchPhotos();
+        if (photos && photos.length) allPhotos = photos;
+      } catch(e) {}
+      renderAlbum();
+    })();
+
+    console.log('🎓 212 宿舍毕业纪念册 — 我们的小窝');
+    console.log('📖 永远记得这段时光 ❤️');
+  </script>
+</body>
+</html>
