@@ -345,17 +345,17 @@
     .stat-card, .album-cover { transition: transform 0.2s cubic-bezier(0.25,0.46,0.45,0.94); transform-style: preserve-3d; }
 
     /* Grain overlay */
-    .grain-overlay { position: fixed; inset: 0; z-index: 9999; pointer-events: none; opacity: 0.025; mix-blend-mode: overlay; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); background-size: 256px 256px; }
+    .grain-overlay { position: fixed; inset: 0; z-index: 9999; pointer-events: none; opacity: 0.06; mix-blend-mode: overlay; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); background-size: 256px 256px; }
 
     /* Parallax depth layers */
-    .parallax-layer { position: fixed; pointer-events: none; z-index: -1; border-radius: 50%; opacity: 0.12; filter: blur(60px); }
+    .parallax-layer { position: fixed; pointer-events: none; z-index: -1; border-radius: 50%; opacity: 0.2; filter: blur(50px); }
     .parallax-1 { width: 500px; height: 500px; background: var(--golden); top: -10%; left: -10%; animation: floatSlow 14s ease-in-out infinite; }
     .parallax-2 { width: 350px; height: 350px; background: var(--milky-tea); bottom: -5%; right: -8%; animation: floatSlow 18s ease-in-out infinite reverse; }
     .parallax-3 { width: 200px; height: 200px; background: var(--golden); top: 40%; left: 55%; animation: floatSlow 12s ease-in-out infinite 3s; }
     .parallax-4 { width: 150px; height: 150px; background: var(--warm-brown); top: 20%; right: 30%; animation: floatSlow 10s ease-in-out infinite 5s; }
 
     /* Floating sparkles */
-    .sparkle { position: fixed; pointer-events: none; z-index: -1; width: 3px; height: 3px; background: var(--golden); border-radius: 50%; opacity: 0; animation: sparkleFloat 8s ease-in-out infinite; }
+    .sparkle { position: fixed; pointer-events: none; z-index: -1; width: 4px; height: 4px; background: var(--golden); border-radius: 50%; opacity: 0; box-shadow: 0 0 6px var(--golden); animation: sparkleFloat 8s ease-in-out infinite; }
     @keyframes sparkleFloat { 0% { opacity: 0; transform: translateY(100vh) scale(0); } 15% { opacity: 0.5; } 85% { opacity: 0.5; } 100% { opacity: 0; transform: translateY(-10vh) scale(1); } }
 
     /* Label underline reveal */
@@ -930,7 +930,7 @@
       albumMeta.forEach(album => {
         const count = photos.filter(p => p.cat === album.id).length;
         const card = document.createElement('div');
-        card.className = 'album-cover';
+        card.className = 'album-cover tilt-card';
         card.innerHTML = '<div class="album-cover-img" style="background:' + album.bg + '">' + album.icon + '</div>' +
           '<div class="album-cover-name">' + album.name + '</div>' +
           '<div class="album-cover-count">' + count + ' 张照片</div>';
@@ -1059,8 +1059,8 @@
         const rect = el.getBoundingClientRect();
         const x = (e.clientX - rect.left) / rect.width - 0.5;
         const y = (e.clientY - rect.top) / rect.height - 0.5;
-        el.style.setProperty('--rx', (-y * 12) + 'deg');
-        el.style.setProperty('--ry', (x * 12) + 'deg');
+        el.style.setProperty('--rx', (-y * 18) + 'deg');
+        el.style.setProperty('--ry', (x * 18) + 'deg');
       });
       el.addEventListener('mouseleave', () => {
         el.style.setProperty('--rx', '0deg');
