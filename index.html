@@ -339,10 +339,7 @@
     <h2 class="section-title">光影瞬间</h2>
 
     <div id="albumListView">
-      <div class="album-upload" id="uploadZone" onclick="document.getElementById('fileInput').click()">
-        <input type="file" id="fileInput" accept="image/*" multiple onchange="handleUpload(event)" />
-        <div class="album-upload-icon">📸</div>
-        <div class="album-upload-text">点击上传照片 · 直接存储到 GitHub · 不限数量</div>
+      
         <div class="upload-status" id="uploadStatus"></div>
       </div>
       <div class="album-covers" id="albumCovers"></div>
@@ -350,6 +347,12 @@
     <div id="albumDetailView" style="display:none;">
       <button class="back-btn" id="backToAlbums">← 返回相册列表</button>
       <h3 class="album-detail-title" id="albumDetailTitle"></h3>
+      <div class="album-upload" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+        <input type="file" id="fileInput" accept="image/*" multiple onchange="handleUpload(event)" />
+        <div class="album-upload-icon">📸</div>
+        <div class="album-upload-text">点击上传照片到本相册</div>
+        <div class="upload-status" id="uploadStatus"></div>
+      </div>
       <div class="album-grid" id="albumGrid"></div>
     </div>
   </section>
@@ -425,6 +428,7 @@
 
 
     let currentFilter = 'all';
+    let currentAlbum = 'daily';
 
     // 示例照片
     const samplePhotos = [
@@ -780,37 +784,12 @@
       if (files.length) showCategoryPicker(files);
     });
 
-    let pendingFiles = [];
-    function showCategoryPicker(files) {
+        let pendingFiles = [];
+        function showCategoryPicker(files) {
       pendingFiles = files;
       if (!files.length) return;
-
-      const overlay = document.createElement('div');
-      overlay.style.cssText = 'position:fixed;inset:0;z-index:3000;background:rgba(30,20,15,0.6);backdrop-filter:blur(8px);display:flex;justify-content:center;align-items:center;';
-      const modal = document.createElement('div');
-      modal.style.cssText = 'background:var(--cream);border-radius:20px;padding:40px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2);text-align:center;';
-      modal.innerHTML = '<p style="font-family:Noto Serif SC,serif;font-size:18px;color:var(--deep);margin-bottom:8px;">📸 上传 ' + files.length + ' 张照片</p>' +
-        '<p style="font-family:Inter,sans-serif;font-size:13px;color:var(--warm-brown);margin-bottom:24px;">选择分类后开始上传（所有人可见）</p>' +
-        '<div style="display:flex;flex-direction:column;gap:8px;">' +
-          '<button class="cat-opt" data-cat="daily" style="padding:12px 24px;border-radius:100px;border:1px solid var(--glass-border);background:transparent;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;color:var(--deep);transition:all 0.3s;">🏠 宿舍日常</button>' +
-          '<button class="cat-opt" data-cat="outing" style="padding:12px 24px;border-radius:100px;border:1px solid var(--glass-border);background:transparent;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;color:var(--deep);transition:all 0.3s;">🌄 一起出去玩</button>' +
-          '<button class="cat-opt" data-cat="graduation" style="padding:12px 24px;border-radius:100px;border:1px solid var(--glass-border);background:transparent;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;color:var(--deep);transition:all 0.3s;">🎓 毕业季</button>' +
-          '<button class="cat-opt" data-cat="funny" style="padding:12px 24px;border-radius:100px;border:1px solid var(--glass-border);background:transparent;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;color:var(--deep);transition:all 0.3s;">😂 搞怪合集</button>' +
-        '</div>';
-      overlay.appendChild(modal);
-      document.body.appendChild(overlay);
-
-      overlay.querySelectorAll('.cat-opt').forEach(btn => {
-        btn.addEventListener('mouseenter', () => btn.style.background = 'rgba(197,169,110,0.1)');
-        btn.addEventListener('mouseleave', () => btn.style.background = 'transparent');
-        btn.addEventListener('click', () => {
-          const cat = btn.dataset.cat;
-          overlay.remove();
-          startUpload(cat);
-        });
-      });
+      startUpload(currentAlbum);
     }
-
     async function startUpload(category) {
       const status = document.getElementById('uploadStatus');
       status.style.display = 'block';
@@ -863,10 +842,13 @@
     }
 
     function openAlbum(id, name) {
+      currentAlbum = id;
       currentFilter = id;
       document.getElementById('albumListView').style.display = 'none';
       document.getElementById('albumDetailView').style.display = 'block';
       document.getElementById('albumDetailTitle').textContent = name;
+      var zt = document.getElementById('uploadZoneText');
+      if (zt) zt.textContent = '点击上传照片到 ' + name;
       renderAlbum();
     }
 
