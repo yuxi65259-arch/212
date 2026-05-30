@@ -338,22 +338,20 @@
     <p class="section-label">Gallery</p>
     <h2 class="section-title">光影瞬间</h2>
 
-    <div class="album-tabs">
-      <button class="album-tab active" data-cat="all">全部</button>
-      <button class="album-tab" data-cat="daily">宿舍日常</button>
-      <button class="album-tab" data-cat="outing">一起出去玩</button>
-      <button class="album-tab" data-cat="graduation">毕业季</button>
-      <button class="album-tab" data-cat="funny">搞怪合集</button>
+    <div id="albumListView">
+      <div class="album-upload" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+        <input type="file" id="fileInput" accept="image/*" multiple onchange="handleUpload(event)" />
+        <div class="album-upload-icon">📸</div>
+        <div class="album-upload-text">点击上传照片 · 直接存储到 GitHub · 不限数量</div>
+        <div class="upload-status" id="uploadStatus"></div>
+      </div>
+      <div class="album-covers" id="albumCovers"></div>
     </div>
-
-    <div class="album-upload" id="uploadZone" onclick="document.getElementById('fileInput').click()">
-      <input type="file" id="fileInput" accept="image/*" multiple onchange="handleUpload(event)" />
-      <div class="album-upload-icon">📸</div>
-      <div class="album-upload-text">点击上传照片 · 直接存储到 GitHub · 不限数量</div>
-      <div class="upload-status" id="uploadStatus"></div>
+    <div id="albumDetailView" style="display:none;">
+      <button class="back-btn" id="backToAlbums">← 返回相册列表</button>
+      <h3 class="album-detail-title" id="albumDetailTitle"></h3>
+      <div class="album-grid" id="albumGrid"></div>
     </div>
-
-    <div class="album-grid" id="albumGrid"></div>
   </section>
 
   <!-- Roommates -->
@@ -667,7 +665,7 @@
     // ==================== RENDER ====================
     function renderAlbum() {
       const grid = document.getElementById('albumGrid');
-      const displayPhotos = [...samplePhotos, ...allPhotos];
+      const displayPhotos = [...samplePhotos, ...allPhotos].filter(p => currentFilter === 'all' || p.cat === currentFilter);
 
       grid.innerHTML = '';
 
@@ -757,6 +755,7 @@
         await deleteFromServer(id);
         allPhotos = allPhotos.filter(p => p.id !== id);
         renderAlbum();
+        renderAlbumCovers();
       } catch(e) {
         alert('删除失败: ' + e.message);
       }
@@ -834,18 +833,48 @@
 
       allPhotos = [...allPhotos, ...batch];
       renderAlbum();
+      renderAlbumCovers();
       status.textContent = `✅ ${batch.length} 张照片上传成功！`;
       setTimeout(() => { status.style.display = 'none'; }, 3000);
     }
 
-    // ==================== ALBUM TABS ====================
-    document.querySelectorAll('.album-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.album-tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        currentFilter = tab.dataset.cat;
-        renderAlbum();
+    // ==================== ALBUM NAVIGATION ====================
+    const albumMeta = [
+      { id: 'daily', name: '宿舍日常', icon: '🏠', bg: 'linear-gradient(135deg,#E8D5C4,#D4A574)' },
+      { id: 'outing', name: '一起出去玩', icon: '🌄', bg: 'linear-gradient(135deg,#C9A96E,#D4A574)' },
+      { id: 'graduation', name: '毕业季', icon: '🎓', bg: 'linear-gradient(135deg,#A67B5B,#C9A96E)' },
+      { id: 'funny', name: '搞怪合集', icon: '😂', bg: 'linear-gradient(135deg,#E8D5C4,#F5E6D3)' },
+    ];
+
+    function renderAlbumCovers() {
+      const container = document.getElementById('albumCovers');
+      const photos = [...samplePhotos, ...allPhotos];
+      container.innerHTML = '';
+      albumMeta.forEach(album => {
+        const count = photos.filter(p => p.cat === album.id).length;
+        const card = document.createElement('div');
+        card.className = 'album-cover';
+        card.innerHTML = '<div class="album-cover-img" style="background:' + album.bg + '">' + album.icon + '</div>' +
+          '<div class="album-cover-name">' + album.name + '</div>' +
+          '<div class="album-cover-count">' + count + ' 张照片</div>';
+        card.onclick = function() { openAlbum(album.id, album.name); };
+        container.appendChild(card);
       });
+    }
+
+    function openAlbum(id, name) {
+      currentFilter = id;
+      document.getElementById('albumListView').style.display = 'none';
+      document.getElementById('albumDetailView').style.display = 'block';
+      document.getElementById('albumDetailTitle').textContent = name;
+      renderAlbum();
+    }
+
+    document.getElementById('backToAlbums').addEventListener('click', () => {
+      currentFilter = 'all';
+      document.getElementById('albumDetailView').style.display = 'none';
+      document.getElementById('albumListView').style.display = 'block';
+      renderAlbumCovers();
     });
 
     // ==================== LIGHTBOX ====================
@@ -954,6 +983,7 @@
         }
       } catch(e) {}
       renderAlbum();
+      renderAlbumCovers();
     })();
 
     console.log('🎓 212 宿舍毕业纪念册 — 我们的小窝');
