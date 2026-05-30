@@ -522,6 +522,17 @@
       });
     }
 
+    async function loadImageViaAPI(apiUrl) {
+      try {
+        const resp = await fetch(apiUrl, {
+          headers: { 'Authorization': 'token ' + GH_TOKEN }
+        });
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        return 'data:image/jpeg;base64,' + data.content;
+      } catch { return null; }
+    }
+
     async function uploadToServer(dataUrl, cat, label) {
       return await uploadToGitHub(dataUrl, cat, label);
     }
@@ -542,15 +553,17 @@
         body: JSON.stringify({ message: 'Add ' + filename, content: base64 })
       });
       if (!fileResp.ok) throw new Error('Upload to GitHub failed');
-      const rawUrl = 'https://raw.githubusercontent.com/' + GH_OWNER + '/' + GH_REPO + '/main/photos/' + filename;
+      const fileData = await fileResp.json();
+      const rawUrl = fileData.content.download_url;
+      const apiUrl = fileData.content.git_url;
 
       // Update photos.json
-      const currentResp = await fetch(PHOTO_LIST_URL + '?_t=' + Date.now());
+      const currentResp = await fetch(PHOTO_LIST_URL);
       let photos = currentResp.ok ? await currentResp.json() : [];
 
       const newPhoto = {
         id: 'p' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-        cat: cat, url: rawUrl, label: label,
+        cat: cat, url: rawUrl, api_url: apiUrl, label: label,
         date: new Date().toISOString().slice(0, 10)
       };
       photos.push(newPhoto);
@@ -580,7 +593,7 @@
     }
 
     async function deleteFromGitHub(id) {
-      const currentResp = await fetch(PHOTO_LIST_URL + '?_t=' + Date.now());
+      const currentResp = await fetch(PHOTO_LIST_URL);
       if (!currentResp.ok) return;
       let photos = await currentResp.json();
       photos = photos.filter(p => p.id !== id);
@@ -628,6 +641,12 @@
           imgEl.src = photo.url;
           imgEl.alt = photo.label || '';
           imgEl.loading = 'lazy';
+          imgEl.onerror = async function() {
+            if (photo.api_url) {
+              const dataUrl = await loadImageViaAPI(photo.api_url);
+              if (dataUrl) { imgEl.src = dataUrl; imgEl.onerror = null; }
+            }
+          };
           imgEl.onerror = async function() {
             if (photo.api_url) {
               const dataUrl = await loadImageViaAPI(photo.api_url);
