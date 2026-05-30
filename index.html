@@ -370,6 +370,30 @@
     #lightbox.open img { transform: scale(1); }
     #lbCaption { transition: opacity 0.3s ease; }
 
+    .cursor-glow { position: fixed; pointer-events: none; z-index: 9998; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgba(201,169,110,0.1) 0%, transparent 70%); transform: translate(-50%, -50%); transition: left 0.3s cubic-bezier(0.25,0.46,0.45,0.94), top 0.3s cubic-bezier(0.25,0.46,0.45,0.94); opacity: 0; }
+    .cursor-glow.visible { opacity: 1; }
+    .scroll-progress { position: fixed; top: 0; left: 0; z-index: 9997; width: 0; height: 2px; background: linear-gradient(90deg, var(--golden), var(--milky-tea), var(--golden)); transition: width 0.1s linear; }
+    nav a.active { animation: heartbeat 2s ease-in-out infinite; }
+    @keyframes heartbeat { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+    .section-title { background: linear-gradient(135deg, var(--deep) 0%, var(--golden) 25%, var(--milky-tea) 50%, var(--golden) 75%, var(--deep) 100%); background-size: 300% 100%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: titleShimmer 4s ease-in-out infinite; }
+    @keyframes titleShimmer { 0%,100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+    .album-upload { position: relative; overflow: hidden; }
+    .album-upload::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: conic-gradient(from 0deg, transparent, rgba(201,169,110,0.04), transparent, rgba(201,169,110,0.04), transparent); animation: rotateGlow 6s linear infinite; }
+    @keyframes rotateGlow { to { transform: rotate(360deg); } }
+    nav { animation: navFloat 4s ease-in-out infinite; }
+    @keyframes navFloat { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-3px); } }
+    .splash-btn, .back-btn, .msg-form button { position: relative; }
+    .splash-btn::after, .back-btn::after, .msg-form button::after { content: ''; position: absolute; inset: -3px; border-radius: 100px; border: 1px solid rgba(201,169,110,0.3); animation: pulseRing 2s cubic-bezier(0.25,0.46,0.45,0.94) infinite; }
+    @keyframes pulseRing { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(1.08); opacity: 0; } }
+    .msg-card { animation: slideInRight 0.4s ease forwards; opacity: 0; }
+    @keyframes slideInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+    .stat-card::before { position: absolute; top: 8px; right: 12px; font-size: 20px; opacity: 0.08; animation: floatEmoji 3s ease-in-out infinite; }
+    .stat-card:nth-child(1)::before { content: '\01F4C5'; }
+    .stat-card:nth-child(2)::before { content: '\01F4F7'; animation-delay: 0.5s; }
+    .stat-card:nth-child(3)::before { content: '\01F372'; animation-delay: 1s; }
+    .stat-card:nth-child(4)::before { content: '\01F393'; animation-delay: 1.5s; }
+    @keyframes floatEmoji { 0%,100% { transform: translateY(0) rotate(0deg); opacity: 0.08; } 50% { transform: translateY(-6px) rotate(5deg); opacity: 0.15; } }
+
     /* Enhanced hover on album covers */
     .album-cover { transform-style: preserve-3d; }
     .album-cover-img { transition: transform 0.6s cubic-bezier(0.25,0.46,0.45,0.94); }
@@ -378,6 +402,8 @@
 </head>
 <body>
   <div class="grain-overlay"></div>
+  <div class="cursor-glow" id="cursorGlow"></div>
+  <div class="scroll-progress" id="scrollProgress"></div>
   <div class="parallax-layer parallax-1"></div>
   <div class="parallax-layer parallax-2"></div>
   <div class="parallax-layer parallax-3"></div>
@@ -1038,6 +1064,22 @@
     }
 
     function escapeHtml(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
+
+    // ==================== CURSOR GLOW ====================
+    const cg = document.getElementById('cursorGlow');
+    let ct;
+    document.addEventListener('mousemove', e => { cg.style.left = e.clientX + 'px'; cg.style.top = e.clientY + 'px'; cg.classList.add('visible'); clearTimeout(ct); ct = setTimeout(() => cg.classList.remove('visible'), 2000); });
+    document.addEventListener('mouseleave', () => cg.classList.remove('visible'));
+
+    // ==================== SCROLL PROGRESS ====================
+    const sb = document.getElementById('scrollProgress');
+    window.addEventListener('scroll', () => { const h = document.documentElement; sb.style.width = ((h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100) + '%'; });
+
+    // ==================== STAGGERED REVEAL ====================
+    if (window.IntersectionObserver) {
+      const obs = new IntersectionObserver(entries => { entries.forEach(e => { if (e.isIntersecting) { e.target.style.animationPlayState = 'running'; obs.unobserve(e.target); } }); }, { threshold: 0.1 });
+      document.querySelectorAll('.stat-card, .album-cover, .roommate-card, .tl-item, .joke-card').forEach(el => { el.style.animationPlayState = 'paused'; obs.observe(el); });
+    }
 
     // ==================== SPATIAL EFFECTS ====================
     // Floating sparkle particles
