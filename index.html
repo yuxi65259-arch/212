@@ -557,9 +557,18 @@
       const rawUrl = fileData.content.download_url;
       const apiUrl = fileData.content.git_url;
 
-      // Update photos.json
-      const currentResp = await fetch(PHOTO_LIST_URL);
-      let photos = currentResp.ok ? await currentResp.json() : [];
+      // Update photos.json (use API to avoid CDN cache)
+      let photos = [];
+      try {
+        const currentResp = await fetch(API_BASE + '/photos.json', {
+          headers: { 'Authorization': 'token ' + GH_TOKEN }
+        });
+        if (currentResp.ok) {
+          const data = await currentResp.json();
+          const decoded = atob(data.content);
+          photos = JSON.parse(decodeURIComponent(escape(decoded)));
+        }
+      } catch(e) {}
 
       const newPhoto = {
         id: 'p' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
