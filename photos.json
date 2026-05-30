@@ -65,5 +65,14 @@
     "label": "IMG_20230430_115110.jpg",
     "date": "2026-05-30",
     "uploader": "段跃"
+  },
+  {
+    "id": "p1780123081686_rp4d",
+    "cat": "daily",
+    "url": "https://raw.githubusercontent.com/yuxi65259-arch/212/master/photos/photo_1780123078947_df4e.jpg",
+    "api_url": "https://api.github.com/repos/yuxi65259-arch/212/git/blobs/bcebb842bd8ca24c2816c33026cd1b7157acf7b2",
+    "label": "IMG_20240104_221043.jpg",
+    "date": "2026-05-30",
+    "uploader": "段跃"
   }
 ]
