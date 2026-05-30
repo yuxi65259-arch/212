@@ -328,6 +328,8 @@
     .album-item:hover img { transform: scale(1.08); }
     .album-upload:hover .album-upload-icon { animation: float 1.5s ease-in-out infinite; }
     .back-btn:hover { transform: translateX(-4px); }
+    .album-detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .album-detail-icon { font-size: 36px; line-height: 1; }
     #lightbox { transition: opacity 0.3s ease; opacity: 0; }
     #lightbox.open { opacity: 1; }
     #lightbox img { transform: scale(0.95); transition: transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94); }
@@ -477,7 +479,7 @@
     </div>
     <div id="albumDetailView" style="display:none;">
       <button class="back-btn" id="backToAlbums">← 返回相册列表</button>
-      <h3 class="album-detail-title" id="albumDetailTitle"></h3>
+      <div class="album-detail-header"><span class="album-detail-icon" id="albumDetailIcon"></span><h3 class="album-detail-title" id="albumDetailTitle"></h3></div>
       <div class="album-upload" id="uploadZone" onclick="document.getElementById('fileInput').click()">
         <input type="file" id="fileInput" accept="image/*" multiple onchange="handleUpload(event)" />
         <div class="album-upload-icon">📸</div>
@@ -968,16 +970,17 @@
           '<div class="album-cover-name">' + album.name + '</div>' +
 	          '<div class="album-cover-desc">' + album.desc + '</div>' +
           '<div class="album-cover-count">' + count + ' 张照片</div>';
-        card.onclick = function() { openAlbum(album.id, album.name); };
+        card.onclick = function() { openAlbum(album.id, album.name, album.icon); };
         container.appendChild(card);
       });
     }
 
-    function openAlbum(id, name) {
+    function openAlbum(id, name, icon) {
       currentAlbum = id;
       currentFilter = id;
       document.getElementById('albumListView').style.display = 'none';
       document.getElementById('albumDetailView').style.display = 'block';
+      document.getElementById('albumDetailIcon').textContent = icon || '';
       document.getElementById('albumDetailTitle').textContent = name;
       var zt = document.getElementById('uploadZoneText');
       if (zt) zt.textContent = '点击上传照片到 ' + name;
