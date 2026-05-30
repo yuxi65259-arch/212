@@ -266,7 +266,7 @@
     #musicBtn.playing { border-color: var(--golden); }
 
     /* Responsive */
-    @media (max-width: 768px) {
+    @media (max-width: 768px) { .album-cover { flex: 0 0 200px; } .album-cover-img { height: 150px; font-size: 40px; }
       nav { top: 12px; gap: 2px; padding: 4px; border-radius: 16px; overflow-x: auto; width: 94%; }
       nav a { padding: 8px 12px; font-size: 11px; flex-shrink: 0; }
       .hero-stats { grid-template-columns: repeat(2, 1fr); gap: 12px; }
@@ -474,7 +474,7 @@
       <div class="album-upload" id="uploadZone" onclick="document.getElementById('fileInput').click()">
         <input type="file" id="fileInput" accept="image/*" multiple onchange="handleUpload(event)" />
         <div class="album-upload-icon">📸</div>
-        <div class="album-upload-text">点击上传照片到本相册</div>
+        <div class="album-upload-text">↑ 点击上传</div>
         <div class="upload-status" id="uploadStatus"></div>
       </div>
       <div class="album-grid" id="albumGrid"></div>
