@@ -281,7 +281,65 @@
       .roommate-grid { grid-template-columns: 1fr 1fr; }
       .hero-stats { grid-template-columns: 1fr 1fr; }
     }
-  </style>
+  
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
+    @keyframes scaleIn { from { opacity: 0; transform: scale(0.92) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes glow { 0%,100% { box-shadow: 0 0 8px rgba(201,169,110,0.15); } 50% { box-shadow: 0 0 24px rgba(201,169,110,0.3); } }
+    @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+    @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+    .stat-card { animation: scaleIn 0.6s ease forwards; opacity: 0; }
+    .stat-card:nth-child(1) { animation-delay: 0.1s; }
+    .stat-card:nth-child(2) { animation-delay: 0.2s; }
+    .stat-card:nth-child(3) { animation-delay: 0.3s; }
+    .stat-card:nth-child(4) { animation-delay: 0.4s; }
+    .stat-card:hover { transform: translateY(-6px) scale(1.02); box-shadow: var(--shadow-md); }
+    .album-cover { animation: scaleIn 0.5s ease forwards; opacity: 0; }
+    .album-cover:nth-child(1) { animation-delay: 0.05s; }
+    .album-cover:nth-child(2) { animation-delay: 0.1s; }
+    .album-cover:nth-child(3) { animation-delay: 0.15s; }
+    .album-cover:nth-child(4) { animation-delay: 0.2s; }
+    .album-item { animation: slideUp 0.5s ease forwards; opacity: 0; }
+    .album-item:nth-child(2) { animation-delay: 0.06s; }
+    .album-item:nth-child(3) { animation-delay: 0.10s; }
+    .album-item:nth-child(4) { animation-delay: 0.14s; }
+    .album-item:nth-child(5) { animation-delay: 0.18s; }
+    .album-item:nth-child(6) { animation-delay: 0.22s; }
+    .roommate-card { animation: scaleIn 0.5s ease forwards; opacity: 0; }
+    .roommate-card:nth-child(1) { animation-delay: 0.1s; }
+    .roommate-card:nth-child(2) { animation-delay: 0.2s; }
+    .roommate-card:nth-child(3) { animation-delay: 0.3s; }
+    .roommate-card:nth-child(4) { animation-delay: 0.4s; }
+    .tl-item { animation: slideUp 0.5s ease forwards; opacity: 0; }
+    .tl-item:nth-child(2) { animation-delay: 0.15s; }
+    .tl-item:nth-child(3) { animation-delay: 0.25s; }
+    .tl-item:nth-child(4) { animation-delay: 0.35s; }
+    .tl-item:nth-child(5) { animation-delay: 0.45s; }
+    .msg-card { animation: slideUp 0.4s ease forwards; opacity: 0; }
+    .joke-card { animation: scaleIn 0.4s ease forwards; opacity: 0; }
+    .joke-card:nth-child(2) { animation-delay: 0.1s; }
+    .joke-card:nth-child(3) { animation-delay: 0.15s; }
+    .joke-card:nth-child(4) { animation-delay: 0.2s; }
+    .album-cover:hover .album-cover-img { transform: scale(1.08); }
+    .album-cover-img { transition: transform 0.6s cubic-bezier(0.25,0.46,0.45,0.94); }
+    .album-cover:hover { animation: glow 2s ease-in-out infinite; }
+    .album-item img { transition: transform 0.6s cubic-bezier(0.25,0.46,0.45,0.94); }
+    .album-item:hover img { transform: scale(1.08); }
+    .album-upload:hover .album-upload-icon { animation: float 1.5s ease-in-out infinite; }
+    .back-btn:hover { transform: translateX(-4px); }
+    #lightbox { transition: opacity 0.3s ease; opacity: 0; }
+    #lightbox.open { opacity: 1; }
+    #lightbox img { transform: scale(0.95); transition: transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94); }
+    #lightbox.open img { transform: scale(1); }
+    .memory-card:hover .memory-img { transform: scale(1.1) rotate(-3deg); }
+    .memory-img { transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94); }
+    nav a.active { background: rgba(197,169,110,0.2); animation: pop 0.3s ease; }
+    #musicBtn.playing { animation: spin 4s linear infinite; }
+    #musicBtn { transition: all 0.5s cubic-bezier(0.25,0.46,0.45,0.94); }
+    #musicBtn:hover { transform: scale(1.1) rotate(180deg); box-shadow: var(--shadow-lg); }
+
+</style>
 </head>
 <body>
   <div class="paper-texture"></div>
