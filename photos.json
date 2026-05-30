@@ -30,5 +30,13 @@
     "api_url": "https://api.github.com/repos/yuxi65259-arch/212/git/blobs/1fa375f7829a5ad04c421690736e12645c4f978c",
     "label": "15923_livephoto.jpeg",
     "date": "2026-05-30"
+  },
+  {
+    "id": "p1780113339180_nban",
+    "cat": "outing",
+    "url": "https://raw.githubusercontent.com/yuxi65259-arch/212/master/photos/photo_1780113336188_oqsx.jpg",
+    "api_url": "https://api.github.com/repos/yuxi65259-arch/212/git/blobs/63ce95cbbf118e5befad4f418d897644f87c9407",
+    "label": "IMG20260528183731.jpg",
+    "date": "2026-05-30"
   }
 ]
