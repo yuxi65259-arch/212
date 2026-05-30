@@ -38,5 +38,14 @@
     "api_url": "https://api.github.com/repos/yuxi65259-arch/212/git/blobs/c8a5b4fcbd692155d9998918b727d44a062f9d73",
     "label": "file_000000001d00720692d39b3fafd1df0e.png",
     "date": "2026-05-30"
+  },
+  {
+    "id": "p1780118642491_zmwg",
+    "cat": "daily",
+    "url": "https://raw.githubusercontent.com/yuxi65259-arch/212/master/photos/photo_1780118639487_ea75.jpg",
+    "api_url": "https://api.github.com/repos/yuxi65259-arch/212/git/blobs/cd9f2f064b700589d9bea84181513278e3e1410e",
+    "label": "IMG_20250511_160339.jpg",
+    "date": "2026-05-30",
+    "uploader": "段跃"
   }
 ]
