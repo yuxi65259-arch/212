@@ -580,17 +580,42 @@
       photos.push(newPhoto);
 
 
-      const updateBody = {
-        message: 'Add photo ' + filename,
-        content: btoa(unescape(encodeURIComponent(JSON.stringify(photos, null, 2))))
-      };
-      if (sha) updateBody.sha = sha;
+      // Retry up to 3 times on conflict
+      const newContent = btoa(unescape(encodeURIComponent(JSON.stringify(photos, null, 2))));
+      for (let retry = 0; retry < 3; retry++) {
+        const updateBody = {
+          message: 'Add photo ' + filename,
+          content: newContent
+        };
+        if (sha) updateBody.sha = sha;
 
-      await fetch(API_BASE + '/photos.json', {
-        method: 'PUT',
-        headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' },
-        body: JSON.stringify(updateBody)
-      });
+        const putResp = await fetch(API_BASE + '/photos.json', {
+          method: 'PUT',
+          headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' },
+          body: JSON.stringify(updateBody)
+        });
+
+        if (putResp.ok) break; // success
+
+        // Conflict: re-read and retry
+        if (putResp.status === 409) {
+          const reRead = await fetch(API_BASE + '/photos.json', {
+            headers: { 'Authorization': 'token ' + GH_TOKEN }
+          });
+          if (reRead.ok) {
+            const rd = await reRead.json();
+            sha = rd.sha;
+            const existing = JSON.parse(decodeURIComponent(escape(atob(rd.content))));
+            for (const p of existing) {
+              if (!photos.find(x => x.id === p.id)) photos.push(p);
+            }
+          }
+        } else {
+          const errText = await putResp.text();
+          console.warn('photos.json update failed:', errText);
+          break;
+        }
+      }
 
       return newPhoto;
     }
