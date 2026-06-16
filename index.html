@@ -579,6 +579,23 @@
     </div>
   </section>
 
+  <section id="moment">
+    <p class="section-label">Moments</p>
+    <h2 class="section-title">212 朋友圈</h2>
+    <div class="moment-post-box">
+      <textarea id="momentText" placeholder="说点什么..." maxlength="500"></textarea>
+      <div class="moment-post-row">
+        <input type="file" id="momentImg" accept="image/*" multiple onchange="handleMomentImages(event)" style="display:none;" />
+        <button onclick="document.getElementById(&quot;momentImg&quot;).click()" class="moment-add-btn">📷 添加图片</button>
+        <button onclick="postMoment()" class="moment-post-btn">发布</button>
+        <div class="moment-preview" id="momentPreview"></div>
+      </div>
+    </div>
+    <div class="moment-feed" id="momentFeed">
+      <p class="moment-empty">Loading...</p>
+    </div>
+  </section>
+
   <!-- Jokes -->
   <section id="jokes">
     <p class="section-label">Inside Jokes</p>
