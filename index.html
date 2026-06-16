@@ -1082,6 +1082,7 @@
       currentFilter = id;
       VISIBLE_COUNT = 50;
       faceFilter = '';
+      renderPersonBar();
       document.getElementById('albumListView').style.display = 'none';
       document.getElementById('albumDetailView').style.display = 'block';
       document.getElementById('albumDetailIcon').textContent = icon || '';
@@ -1354,7 +1355,7 @@
         personBar = document.createElement('div');
         personBar.className = 'person-bar';
         var dv = document.getElementById('albumDetailView');
-        if (dv) { var title = document.getElementById('albumDetailTitle'); if (title && title.parentNode) title.parentNode.insertBefore(personBar, title.nextSibling); }
+        if (dv) { var title = document.getElementById('albumDetailTitle'); if (title && title.parentNode) title.parentNode.appendChild(personBar); }
       }
       if (!personBar) return;
       var names = Object.keys(faceData);
@@ -1387,6 +1388,7 @@
       } catch(e) {}
       renderAlbum();
       renderAlbumCovers();
+      setTimeout(function() { renderPersonBar(); }, 2000);
     })();
 
     console.log('🎓 212 宿舍毕业纪念册 — 我们的小窝');
