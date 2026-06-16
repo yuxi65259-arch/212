@@ -497,7 +497,7 @@
         <input type="file" id="fileInput" accept="image/*" multiple onchange="handleUpload(event)" />
         <input type="file" id="folderInput" webkitdirectory multiple onchange="handleUpload(event)" />
         <div class="album-upload-icon">📸</div>
-        <div class="album-upload-text">↑ 点击上传图片 · 支持批量多选 · 最多2000张</div>
+        <div class="album-upload-text">↑ 点击上传图片 · 拖拽文件夹 · 支持 10000 张</div>
         <div class="upload-folder-btn" onclick="event.stopPropagation();document.getElementById('folderInput').click()">📁 上传文件夹</div>
         <div class="upload-progress" id="uploadProgress" style="display:none;"><div class="upload-progress-bar" id="uploadProgressBar"></div></div>
         <div class="upload-status" id="uploadStatus"></div>
@@ -817,6 +817,9 @@
     }
 
     // ==================== RENDER ====================
+    var VISIBLE_COUNT = 50;
+    function loadMorePhotos() { VISIBLE_COUNT += 50; renderAlbum(); }
+
     function renderAlbum() {
       const grid = document.getElementById('albumGrid');
       const displayPhotos = [...samplePhotos, ...allPhotos].filter(p => currentFilter === 'all' || p.cat === currentFilter);
@@ -824,12 +827,15 @@
       grid.innerHTML = '';
 
       if (displayPhotos.length === 0) {
-        grid.innerHTML = '<p style="text-align:center;color:var(--warm-brown);padding:60px 0;font-size:14px;">暂无照片，点击上方区域上传 📸</p>';
+        grid.innerHTML = '<p style="text-align:center;color:var(--warm-brown);padding:60px 0;font-size:14px;">暂无照片，点击上方区域上传 \ud83d\udcf8</p>';
         return;
       }
 
+      var shown = 0;
       displayPhotos.forEach(photo => {
         if (currentFilter !== 'all' && photo.cat !== currentFilter) return;
+        if (shown >= VISIBLE_COUNT) return;
+        shown++;
 
         const item = document.createElement('div');
         item.className = 'album-item';
@@ -901,6 +907,14 @@
 
         grid.appendChild(item);
       });
+
+      // Add load more button if there are more photos
+      if (displayPhotos.filter(p => currentFilter === 'all' || p.cat === currentFilter).length > VISIBLE_COUNT) {
+        var more = document.createElement('div');
+        more.style.cssText = 'text-align:center;padding:24px;grid-column:1/-1;';
+        more.innerHTML = '<button onclick="loadMorePhotos()" style="padding:12px 32px;border-radius:100px;border:1px solid var(--glass-border);background:var(--glass-bg);color:var(--deep);cursor:pointer;font-family:Inter,sans-serif;font-size:13px;letter-spacing:1px;transition:all 0.3s;">加载更多 (' + (displayPhotos.filter(p => currentFilter === 'all' || p.cat === currentFilter).length - VISIBLE_COUNT) + ' 张剩余)</button>';
+        grid.appendChild(more);
+      }
     }
 
     async function deletePhoto(id) {
@@ -916,10 +930,15 @@
     }
 
     // ==================== UPLOAD ====================
+    // Auto-detect images from files (works with webkitdirectory too)
+    var IMAGE_RE = /\.(jpg|jpeg|png|gif|webp|bmp|heic|heif|tiff|svg|ico)$/i;
+    var isImage = function(f) { return f.type && f.type.startsWith('image/') || IMAGE_RE.test(f.name); };
+
     async function handleUpload(event) {
       var allFiles = Array.from(event.target.files);
-      var files = allFiles.filter(function(f) { return f.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp|heic|heif)$/i.test(f.name); });
-      if (!files.length) { event.target.value = ''; return; }
+      var files = allFiles.filter(isImage);
+      console.log('[upload] Selected ' + files.length + ' images from ' + allFiles.length + ' files');
+      if (!files.length) { event.target.value = ''; alert('No image files found. Supported: jpg, png, gif, webp, heic'); return; }
       event.target.value = '';
       showCategoryPicker(files);
     }
@@ -931,48 +950,69 @@
       e.preventDefault();
       uploadZone.style.borderColor = '';
       uploadZone.style.background = '';
-      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(f.name));
+      var files = Array.from(e.dataTransfer.files).filter(isImage);
+      console.log('[drop] ' + files.length + ' images dropped');
       if (files.length) showCategoryPicker(files);
     });
 
-        let pendingFiles = [];
-        function showCategoryPicker(files) {
+    var pendingFiles = [];
+    function showCategoryPicker(files) {
       pendingFiles = files;
       if (!files.length) return;
+      console.log('[upload] Starting upload of ' + files.length + ' files to ' + currentAlbum);
       startUpload(currentAlbum);
     }
+
     async function startUpload(category) {
-      const status = document.getElementById('uploadStatus');
-      status.style.display = 'block';
+      var status = document.getElementById('uploadStatus');
       var prog = document.getElementById('uploadProgress');
       var progBar = document.getElementById('uploadProgressBar');
+      status.style.display = 'block';
       if (prog) { prog.style.display = 'block'; progBar.style.width = '0'; }
 
-      // Load existing shared photos
-      const batch = [];
-      let failed = 0;
-      const total = pendingFiles.length;
+      var batch = [];
+      var failed = 0;
+      var skipped = 0;
+      var total = pendingFiles.length;
 
-      for (let i = 0; i < pendingFiles.length; i++) {
-        const file = pendingFiles[i];
-        status.textContent = `⏳ 上传中 ${i+1}/${total} (${Math.round(((i+1)/total)*100)}%) - ${file.name}`;
-        try {
-          progBar.style.width = Math.round(((i + 1) / total) * 100) + '%';
-          const dataUrl = await compressImage(file);
-          const result = await uploadToServer(dataUrl, category, file.name);
-          batch.push(result);
-          if (i % 5 === 0) await new Promise(function(r) { setTimeout(r, 0); });
-        } catch(e) {
-          status.textContent = `⏳ 跳过 ${file.name}...`; failed++;
+      for (var i = 0; i < total; i++) {
+        var file = pendingFiles[i];
+        var pct = Math.round(((i + 1) / total) * 100);
+        if (progBar) progBar.style.width = pct + '%';
+        status.textContent = 'Uploading ' + (i+1) + '/' + total + ' (' + pct + '%) - ' + file.name;
+
+        // Auto-retry up to 2 times
+        var retries = 0;
+        var uploaded = false;
+        while (retries < 3 && !uploaded) {
+          try {
+            var dataUrl = await compressImage(file);
+            var result = await uploadToServer(dataUrl, category, file.name);
+            batch.push(result);
+            uploaded = true;
+          } catch(e) {
+            retries++;
+            if (retries >= 3) { failed++; console.warn('[upload] Failed: ' + file.name + ' - ' + e.message); }
+            else { status.textContent = 'Retrying ' + file.name + ' (' + retries + '/2)...'; await new Promise(function(r) { setTimeout(r, 500); }); }
+          }
         }
+
+        // Yield to UI every 3 files
+        if (i % 3 === 0) await new Promise(function(r) { setTimeout(r, 0); });
       }
 
-      allPhotos = [...allPhotos, ...batch];
-      renderAlbum();
-      renderAlbumCovers();
-      status.textContent = failed > 0 ? `✅ ${total - failed} 张成功，${failed} 张失败` : `✅ ${total - failed} 张照片上传成功！`;
-      setTimeout(() => { status.style.display = 'none'; if (prog) prog.style.display = 'none'; }, 5000);
+      if (batch.length > 0) {
+        allPhotos = allPhotos.concat(batch);
+        renderAlbum();
+        renderAlbumCovers();
+      }
+
+      var success = total - failed;
+      status.textContent = failed > 0 ? 'Done: ' + success + ' uploaded, ' + failed + ' failed' : 'Done: ' + success + ' photos uploaded!';
+      console.log('[upload] Complete: ' + success + ' success, ' + failed + ' failed');
+      setTimeout(function() { status.style.display = 'none'; if (prog) prog.style.display = 'none'; }, 5000);
     }
+    // ==================== END UPLOAD ====================
 
     // ==================== ALBUM NAVIGATION ====================
     const albumMeta = [
@@ -1002,6 +1042,7 @@
     function openAlbum(id, name, icon) {
       currentAlbum = id;
       currentFilter = id;
+      VISIBLE_COUNT = 50;
       document.getElementById('albumListView').style.display = 'none';
       document.getElementById('albumDetailView').style.display = 'block';
       document.getElementById('albumDetailIcon').textContent = icon || '';
