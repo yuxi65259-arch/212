@@ -877,7 +877,11 @@
 
         const overlay = document.createElement('div');
         overlay.className = 'album-overlay';
-        overlay.textContent = (photo.label || '') + (photo.uploader ? ' - ' + photo.uploader : ''); if (photo.faceTags && photo.faceTags.length) { overlay.textContent += ' [Faces: ' + photo.faceTags.join(', ') + ']'; }
+        overlay.textContent = (photo.label || '') + (photo.uploader ? ' - ' + photo.uploader : '');
+        if (photo.faceTags && photo.faceTags.length) {
+          overlay.textContent += ' [Faces: ' + photo.faceTags.join(', ') + ']';
+          if (photo.faceTags.indexOf('Unknown') >= 0) overlay.textContent += ' (click on tag to name)';
+        }
         item.appendChild(overlay);
 
         if (!photo.isSample) {
@@ -1278,6 +1282,7 @@
       try {
         // Re-draw to clean canvas to avoid tainted canvas
         var cleanCanvas = document.createElement('canvas');
+        cleanCanvas.getContext('2d', { willReadFrequently: true });
         cleanCanvas.width = img.naturalWidth || img.width || 200;
         cleanCanvas.height = img.naturalHeight || img.height || 200;
         var cc = cleanCanvas.getContext('2d');
@@ -1289,8 +1294,9 @@
         photo.faceTags = [];
         for (var i = 0; i < det.length; i++) {
           var found = matchFace(det[i].descriptor);
-          if (found) photo.faceTags.push(found);
+          if (found) { photo.faceTags.push(found); } else { photo.faceTags.push('Unknown'); }
         }
+        console.log('[face] Photo ' + (photo.label || photo.id) + ': found ' + det.length + ' face(s), tags:', photo.faceTags);
       } catch(e) {}
     }
 
@@ -1378,12 +1384,19 @@
       h += '<button class="face-tag' + (faceFilter === '' ? ' active' : '') + '" onclick="filterPersonClick(event)" data-person="">All</button>';
       names.forEach(function(n) { h += '<button class="face-tag' + (faceFilter === n ? ' active' : '') + '" data-person="' + n + '" onclick="filterPersonClick(event)">' + n + '</button>'; });
       if (count) h += '<span style="font-size:11px;color:var(--milky-tea);margin-left:6px;">' + count + ' photos</span>';
-      personBar.innerHTML = h;
+        var unknown = allPhotos.filter(function(p) { return p.faceTags && p.faceTags.indexOf('Unknown') >= 0; }).length;
+    if (unknown > 0) h += '<span style="font-size:11px;color:var(--golden);margin-left:8px;cursor:pointer;" onclick="nameNextUnknown()">Name ' + unknown + ' unknown</span>';
+    personBar.innerHTML = h;
     }
 
     function filterPersonClick(e) { var p = e.target.getAttribute('data-person'); filterPerson(p); }
     function filterPerson(n) { faceFilter = n; VISIBLE_COUNT = 50; renderAlbum(); renderPersonBar(); }
-    function namePerson(id) { var n = prompt('Name:', ''); if (n && n.trim()) saveFaceData(id, n.trim()); }
+    function namePerson(id) { var n = prompt('Name this person (e.g. "Zhang San"):', ''); if (n && n.trim()) saveFaceData(id, n.trim()); }
+    function nameNextUnknown() {
+      var photo = allPhotos.find(function(p) { return p.faceTags && p.faceTags.indexOf('Unknown') >= 0; });
+      if (photo) namePerson(photo.id);
+      else alert('No unknown faces found. Upload photos with faces first!');
+    }
 
     // ==================== INIT ====================
     let allPhotos = [];
