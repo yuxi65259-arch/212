@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>212 宿舍 · 毕业纪念册</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet" />
-  <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.14/dist/face-api.js"></script>
+  <!-- Face detection removed - use cloud API for production -->
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; }
@@ -333,7 +333,7 @@
     .upload-progress { width:100%; height: 4px; background: rgba(197,169,110,0.1); border-radius: 2px; margin-top: 12px; overflow: hidden; }
     .upload-progress-bar { height: 100%; background: linear-gradient(90deg, var(--golden), var(--milky-tea)); border-radius: 2px; width: 0; transition: width 0.3s ease; }
     .back-btn:hover { transform: translateX(-4px); }
-    .face-avatar { display: inline-flex; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; border: 2px solid transparent; background: rgba(201,169,110,0.1); font-size: 14px; color: var(--deep); } .face-avatar img { width: 100%; height: 100%; object-fit: cover; } .face-avatar.active { border-color: var(--golden); box-shadow: 0 0 10px rgba(201,169,110,0.4); transform: scale(1.12); } .face-avatar:hover { transform: scale(1.08); box-shadow: 0 0 8px rgba(201,169,110,0.2); } .face-tag { display: inline-block; padding: 3px 10px; border-radius: 10px; background: rgba(201,169,110,0.15); font-size: 11px; color: var(--warm-brown); cursor: pointer; margin: 2px 4px; } .face-tag:hover { background: rgba(201,169,110,0.3); } .face-tag.active { background: var(--golden); color: #fff; } .person-bar { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 16px; align-items: center; } .album-detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+       .album-detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
     .album-detail-icon { font-size: 36px; line-height: 1; }
     #lightbox { transition: opacity 0.3s ease; opacity: 0; }
     #lightbox.open { opacity: 1; }
@@ -833,7 +833,6 @@
       }
 
       var shown = 0;
-      if (faceFilter) { displayPhotos = displayPhotos.filter(function(p) { return p.faceTags && p.faceTags.indexOf(faceFilter) >= 0; }); }
       displayPhotos.forEach(photo => {
         if (currentFilter !== 'all' && photo.cat !== currentFilter) return;
         if (shown >= VISIBLE_COUNT) return;
@@ -866,7 +865,7 @@
           };
           item.appendChild(imgEl);
           item.classList.add('landscape');
-          if (!photo.isSample && !photo.faceDescriptors) { queueFace(photo); }
+          
         } else {
           const div = document.createElement('div');
           div.className = 'placeholder-img';
@@ -878,10 +877,7 @@
         const overlay = document.createElement('div');
         overlay.className = 'album-overlay';
         overlay.textContent = (photo.label || '') + (photo.uploader ? ' - ' + photo.uploader : '');
-        if (photo.faceTags && photo.faceTags.length) {
-          overlay.textContent += ' [Faces: ' + photo.faceTags.join(', ') + ']';
-          if (photo.faceTags.indexOf('Unknown') >= 0) overlay.textContent += ' (click on tag to name)';
-        }
+        
         item.appendChild(overlay);
 
         if (!photo.isSample) {
@@ -1086,8 +1082,6 @@
       currentFilter = id;
       VISIBLE_COUNT = 50;
       faceFilter = '';
-      allFaceThumbs = [];
-      renderPersonBar();
       document.getElementById('albumListView').style.display = 'none';
       document.getElementById('albumDetailView').style.display = 'block';
       document.getElementById('albumDetailIcon').textContent = icon || '';
@@ -1256,164 +1250,6 @@
     function showNamePrompt() { var p = document.getElementById('namePrompt'); if (p) p.style.display = 'flex'; }
     function setName() { var inp = document.getElementById('nameInput'); var n = inp.value.trim(); if (!n) { inp.style.borderColor = '#e74c3c'; return; } myName = n; localStorage.setItem('dorm212_name', n); document.getElementById('namePrompt').style.display = 'none'; }
     document.addEventListener('keydown', function(e) { if (e.key === 'Enter' && document.getElementById('namePrompt')?.style.display === 'flex') setName(); });
-    // ==================== FACE DETECTION ====================
-    var faceReady = false;
-    var faceData = JSON.parse(localStorage.getItem('dorm212_faces') || '{}');
-    var allFaceThumbs = [];
-    var faceFilter = '';
-    var faceQueue = [];
-    var faceRunning = false;
-
-    async function loadFaceModels() {
-      if (faceReady) return true;
-      if (typeof faceapi === 'undefined') { console.log('[face] faceapi not loaded'); return false; }
-      try {
-        var MU = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.14/model/';
-        console.log('[face] Loading models from', MU);
-        await faceapi.nets.tinyFaceDetector.loadFromUri(MU);
-        await faceapi.nets.faceLandmark68Net.loadFromUri(MU);
-        await faceapi.nets.faceRecognitionNet.loadFromUri(MU);
-        faceReady = true;
-        console.log('[face] Models loaded OK');
-        setTimeout(function() { scanAllFaces(); }, 500);
-        return true;
-      } catch(e) { console.warn('[face] Model load error:', e.message); return false; }
-    }
-
-    async function detectFacesForPhoto(photo, img) {
-      if (!faceReady) return;
-      try {
-        // Re-draw to clean canvas to avoid tainted canvas
-        var cleanCanvas = document.createElement('canvas');
-        cleanCanvas.getContext('2d', { willReadFrequently: true });
-        cleanCanvas.width = img.naturalWidth || img.width || 200;
-        cleanCanvas.height = img.naturalHeight || img.height || 200;
-        var cc = cleanCanvas.getContext('2d');
-        cc.drawImage(img, 0, 0);
-        var det = await faceapi.detectAllFaces(cleanCanvas, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.3 })).withFaceLandmarks().withFaceDescriptors();
-        if (!det.length) return;
-        photo.hasFace = true;
-        photo.faceDescriptors = det.map(function(d) { return Array.from(d.descriptor); });
-        photo.faceTags = [];
-        photo.faceThumbs = [];
-        for (var i = 0; i < det.length; i++) {
-          var found = matchFace(det[i].descriptor);
-          var tag = found || 'Unknown';
-          if (found) { photo.faceTags.push(found); } else { photo.faceTags.push('Unknown'); }
-          var box = det[i].detection.box;
-          var tc = document.createElement('canvas'); tc.width = 80; tc.height = 80;
-          var tctx = tc.getContext('2d'); tctx.beginPath(); tctx.arc(40, 40, 38, 0, Math.PI * 2); tctx.clip();
-          var sc = Math.max(80 / box.width, 80 / box.height) * 1.3;
-          tctx.drawImage(img || cleanCanvas, box.x - box.width * 0.15, box.y - box.height * 0.15, box.width * 1.3, box.height * 1.3, -5, -5, 90, 90);
-          photo.faceThumbs.push({ tag: tag, thumb: tc.toDataURL(), photoId: photo.id });
-        }
-        photo.faceThumbs.forEach(function(ft) { if (!allFaceThumbs.find(function(t) { return t.tag === ft.tag; })) allFaceThumbs.push(ft); });
-        console.log('[face] Photo ' + (photo.label || photo.id) + ': found ' + det.length + ' face(s), tags:', photo.faceTags);
-      } catch(e) {}
-    }
-
-    function matchFace(desc) {
-      var best = '', bestDist = 0.6;
-      for (var k in faceData) {
-        var d = faceapi.euclideanDistance(desc, new Float32Array(faceData[k]));
-        if (d < bestDist) { bestDist = d; best = k; }
-      }
-      return best;
-    }
-
-    function saveFaceData(id, name) {
-      var photo = allPhotos.find(function(p) { return p.id === id; });
-      if (!photo || !photo.faceDescriptors) return;
-      faceData[name] = photo.faceDescriptors[0];
-      localStorage.setItem('dorm212_faces', JSON.stringify(faceData));
-      // re-match all photos
-      allPhotos.forEach(function(p) {
-        if (p.faceDescriptors) {
-          p.faceTags = [];
-          for (var i = 0; i < p.faceDescriptors.length; i++) {
-            var m = matchFace(new Float32Array(p.faceDescriptors[i]));
-            if (m && p.faceTags.indexOf(m) < 0) p.faceTags.push(m);
-          }
-        }
-      });
-      renderPersonBar();
-      renderAlbum();
-      console.log('[face] Saved:', name);
-    }
-
-    function processFaceQueue() {
-      if (faceRunning || !faceQueue.length) return;
-      faceRunning = true;
-      (async function() {
-        if (!await loadFaceModels()) {
-          // faceapi not ready yet, retry in 2s
-          faceRunning = false;
-          setTimeout(function() { console.log('[face] Retrying model load...'); processFaceQueue(); }, 2000);
-          return;
-        }
-        while (faceQueue.length > 0) {
-          var item = faceQueue.shift();
-          console.log('[face] Processing: ' + (item.photo.label || item.photo.id) + ' (' + faceQueue.length + ' left in queue)');
-          var img = document.getElementById('face-img-' + item.id);
-          if (!img) { img = new Image(); img.crossOrigin = 'anonymous'; img.src = item.url; await new Promise(function(r) { img.onload = r; }); }
-          await detectFacesForPhoto(item.photo, img);
-          await new Promise(function(r) { setTimeout(r, 50); });
-        }
-        // re-assign tags
-        allPhotos.forEach(function(p) {
-          if (p.faceDescriptors) {
-            p.faceTags = [];
-            for (var i = 0; i < p.faceDescriptors.length; i++) {
-              var m = matchFace(new Float32Array(p.faceDescriptors[i]));
-              if (m && p.faceTags.indexOf(m) < 0) p.faceTags.push(m);
-            }
-          }
-        });
-        renderPersonBar();
-        renderAlbum();
-        faceRunning = false;
-      })();
-    }
-
-    function queueFace(photo) {
-      if (!photo.url || photo.isSample) return;
-      faceQueue.push({ photo: photo, id: photo.id, url: photo.url });
-      processFaceQueue();
-    }
-
-    var personBar;
-    function filterAll() { filterAll(); }
-    function renderPersonBar() {
-      if (!personBar) { personBar = document.createElement('div'); personBar.className = 'person-bar'; personBar.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 16px;align-items:center;'; var dv = document.getElementById('albumDetailView'); if (dv) { var title = document.getElementById('albumDetailTitle'); if (title && title.parentNode) title.parentNode.appendChild(personBar); } }
-      if (!personBar) return;
-      var seen = {}; var ut = allFaceThumbs.filter(function(t, i, arr) { if (seen[t.tag]) return false; seen[t.tag] = true; return true; });
-      ut.sort(function(a, b) { if (a.tag === 'Unknown') return 1; if (b.tag === 'Unknown') return -1; return a.tag.localeCompare(b.tag); });
-      var scanLabel = faceReady ? 'Re-scan' : 'Scan faces'; var h = '<button onclick="scanAllFaces()" style="padding:6px 14px;border-radius:100px;border:1px solid var(--glass-border);background:transparent;cursor:pointer;font-family:Inter,sans-serif;font-size:11px;color:var(--warm-brown);margin-right:8px;transition:all 0.3s;">' + scanLabel + '</button>'; h += '<div class="face-avatar' + (faceFilter === '' ? ' active' : '') + '" onclick="filterPersonClick(event)" data-person="" style="background:var(--deep);color:#fff;font-size:11px;font-weight:bold;">All</div>';
-      ut.forEach(function(t) {
-        if (t.tag === 'Unknown') { h += '<div class="face-avatar" onclick="nameUnknownPrompt(event)" title="Click to name">?</div>'; }
-        else { h += '<div class="face-avatar' + (faceFilter === t.tag ? ' active' : '') + '" onclick="filterPersonClick(event)" data-person="' + t.tag + '"><img src="' + t.thumb + '" onerror="this.style.display=\'none\';this.parentElement.textContent=\'' + t.tag.charAt(0) + '\'" /></div>'; }
-      });
-      var unknown = allPhotos.filter(function(p) { return p.faceTags && p.faceTags.indexOf('Unknown') >= 0; }).length;
-      if (unknown > 0) h += '<span style="font-size:11px;color:var(--golden);margin-left:4px;cursor:pointer;" onclick="nameNextUnknown()">Name ' + unknown + ' faces</span>';
-      personBar.innerHTML = h;
-    }
-
-    function scanAllFaces() {
-      allPhotos.forEach(function(p) { if (!p.isSample) queueFace(p); });
-      console.log('[face] Scan triggered for ' + allPhotos.filter(function(p) { return !p.isSample; }).length + ' photos');
-    }
-    function nameUnknownPrompt(e) { if (e && e.shiftKey) { nameNextUnknown(); } else { filterPerson('Unknown'); } }
-
-
-    function filterPersonClick(e) { var p = e.currentTarget.getAttribute('data-person'); filterPerson(p); }
-    function filterPerson(n) { faceFilter = n; VISIBLE_COUNT = 50; renderAlbum(); renderPersonBar(); console.log('[face] Filtering by:', n); }
-    function namePerson(id) { var n = prompt('Name this person (e.g. "Zhang San"):', ''); if (n && n.trim()) saveFaceData(id, n.trim()); }
-    function nameNextUnknown() {
-      var photo = allPhotos.find(function(p) { return p.faceTags && p.faceTags.indexOf('Unknown') >= 0; });
-      if (photo) namePerson(photo.id);
-      else alert('No unknown faces found. Upload photos with faces first!');
-    }
-
     // ==================== INIT ====================
     let allPhotos = [];
     let allMessages = [];
@@ -1431,9 +1267,7 @@
       } catch(e) {}
       renderAlbum();
       renderAlbumCovers();
-      setTimeout(function() { renderPersonBar(); }, 2000);
-      // Start face detection after models likely loaded
-      setTimeout(function() { if (allPhotos.length > 0 && !faceReady) { console.log('[face] Starting initial face scan...'); allPhotos.forEach(function(p) { if (!p.isSample && !p.hasOwnProperty('hasFace')) queueFace(p); }); } }, 3000);
+      
     })();
 
     console.log('🎓 212 宿舍毕业纪念册 — 我们的小窝');
