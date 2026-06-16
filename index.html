@@ -333,6 +333,38 @@
     .upload-progress { width:100%; height: 4px; background: rgba(197,169,110,0.1); border-radius: 2px; margin-top: 12px; overflow: hidden; }
     .upload-progress-bar { height: 100%; background: linear-gradient(90deg, var(--golden), var(--milky-tea)); border-radius: 2px; width: 0; transition: width 0.3s ease; }
     .back-btn:hover { transform: translateX(-4px); }
+    .moment-post-box { background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: 24px; margin-bottom: 20px; }
+    .moment-post-btn { padding: 10px 28px; border-radius: 100px; border: none; background: var(--deep); color: #fff; font-family: Inter,sans-serif; font-size: 13px; letter-spacing: 1px; cursor: pointer; transition: all 0.3s; }
+    .moment-post-btn:hover { background: var(--dark-brown); transform: translateY(-2px); }
+    .moment-add-btn { padding: 10px 20px; border-radius: 100px; border: 1px solid var(--glass-border); background: transparent; font-family: Inter,sans-serif; font-size: 13px; color: var(--warm-brown); cursor: pointer; transition: all 0.3s; }
+    .moment-add-btn:hover { background: rgba(197,169,110,0.1); }
+    .moment-feed { display: flex; flex-direction: column; gap: 20px; }
+    .moment-card { background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); overflow: hidden; animation: slideUp 0.5s ease forwards; opacity: 0; }
+    .moment-header { display: flex; align-items: center; gap: 10px; padding: 16px 20px 10px; }
+    .moment-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--milky-tea), var(--golden)); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; font-weight: bold; flex-shrink: 0; }
+    .moment-author { font-weight: 500; font-size: 14px; color: var(--deep); }
+    .moment-time { font-size: 11px; color: var(--warm-brown); }
+    .moment-text { padding: 0 20px 12px; font-size: 14px; line-height: 1.7; color: var(--deep); }
+    .moment-images { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 4px; padding: 0 20px 12px; }
+    .moment-images img { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; cursor: pointer; transition: transform 0.3s; }
+    .moment-images img:hover { transform: scale(1.03); }
+    .moment-actions { display: flex; gap: 16px; padding: 8px 20px 12px; border-top: 1px solid var(--glass-border); }
+    .moment-like-btn { border: none; background: none; cursor: pointer; font-size: 13px; color: var(--warm-brown); display: flex; align-items: center; gap: 4px; transition: all 0.2s; padding: 4px 8px; border-radius: 6px; }
+    .moment-like-btn:hover { background: rgba(201,169,110,0.1); }
+    .moment-like-btn.liked { color: #e74c3c; }
+    .moment-comment-btn { border: none; background: none; cursor: pointer; font-size: 13px; color: var(--warm-brown); transition: all 0.2s; padding: 4px 8px; border-radius: 6px; }
+    .moment-comment-btn:hover { background: rgba(201,169,110,0.1); }
+    .moment-comments { padding: 0 20px 12px; }
+    .moment-comment { display: flex; gap: 6px; padding: 4px 0; font-size: 13px; }
+    .moment-comment-author { font-weight: 500; color: var(--deep); flex-shrink: 0; }
+    .moment-comment-text { color: var(--deep); }
+    .moment-comment-input { display: flex; gap: 8px; padding: 0 20px 12px; }
+    .moment-comment-input input { flex: 1; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.5); font-size: 13px; outline: none; color: var(--deep); }
+    .moment-comment-input button { padding: 6px 14px; border-radius: 12px; border: none; background: var(--deep); color: #fff; font-size: 12px; cursor: pointer; }
+    .moment-preview-img { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; position: relative; }
+    .moment-preview-wrap { position: relative; display: inline-block; }
+    .moment-preview-del { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: rgba(200,50,50,0.8); color: #fff; border: none; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
        .album-detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
     .album-detail-icon { font-size: 36px; line-height: 1; }
     #lightbox { transition: opacity 0.3s ease; opacity: 0; }
@@ -442,6 +474,7 @@
     <a href="#" data-section="roommates">室友</a>
     <a href="#" data-section="stories">故事</a>
     <a href="#" data-section="messages">留言</a>
+    <a href="#" data-section="moment">动态</a>
     <a href="#" data-section="jokes">梗百科</a>
   </nav>
 
@@ -604,6 +637,7 @@
         link.classList.add('active');
         document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
         document.getElementById(link.dataset.section).classList.add('active');
+        if (link.dataset.section === 'moment') { renderMoments(); }
       });
     });
 
@@ -1250,6 +1284,165 @@
     function showNamePrompt() { var p = document.getElementById('namePrompt'); if (p) p.style.display = 'flex'; }
     function setName() { var inp = document.getElementById('nameInput'); var n = inp.value.trim(); if (!n) { inp.style.borderColor = '#e74c3c'; return; } myName = n; localStorage.setItem('dorm212_name', n); document.getElementById('namePrompt').style.display = 'none'; }
     document.addEventListener('keydown', function(e) { if (e.key === 'Enter' && document.getElementById('namePrompt')?.style.display === 'flex') setName(); });
+    // ==================== MOMENTS ====================
+    var momentImages = [];
+    var allMoments = [];
+
+    function previewMomentImages(e) {
+      var files = Array.from(e.target.files);
+      files.forEach(function(f) {
+        if (!f.type.startsWith('image/')) return;
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+          momentImages.push(ev.target.result);
+          renderMomentPreview();
+        };
+        reader.readAsDataURL(f);
+      });
+      e.target.value = '';
+    }
+
+    function renderMomentPreview() {
+      var prev = document.getElementById('momentPreview');
+      prev.innerHTML = '';
+      momentImages.forEach(function(img, i) {
+        prev.innerHTML += '<div class="moment-preview-wrap"><img class="moment-preview-img" src="' + img + '" /><button class="moment-preview-del" onclick="removeMomentImage(' + i + ')">x</button></div>';
+      });
+    }
+
+    function removeMomentImage(i) { momentImages.splice(i, 1); renderMomentPreview(); }
+
+    async function postMoment() {
+      var text = document.getElementById('momentText').value.trim();
+      if (!text && !momentImages.length) return;
+      if (!myName) { showNamePrompt(); return; }
+
+      var compressed = [];
+      for (var i = 0; i < momentImages.length; i++) {
+        var img = new Image(); img.src = momentImages[i];
+        await new Promise(function(r) { img.onload = r; });
+        var c = document.createElement('canvas'); var MAX = 600;
+        var w = img.naturalWidth, h = img.naturalHeight;
+        if (w > MAX || h > MAX) { if (w > h) { h = h * MAX / w; w = MAX; } else { w = w * MAX / h; h = MAX; } }
+        c.width = w; c.height = h; var ctx = c.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
+        compressed.push(c.toDataURL('image/jpeg', 0.7));
+      }
+
+      var moment = {
+        id: 'md' + Date.now(),
+        author: myName,
+        time: new Date().toLocaleString('zh-CN'),
+        text: text,
+        images: compressed,
+        likes: [],
+        comments: []
+      };
+
+      try {
+        await saveMoments(moment);
+        momentImages = []; renderMomentPreview();
+        document.getElementById('momentText').value = '';
+        renderMoments();
+      } catch(e) { alert('Publish failed: ' + e.message); }
+    }
+
+    async function loadAllMoments() {
+      try {
+        var resp = await fetch(API_BASE + '/moments.json', { headers: { 'Authorization': 'token ' + GH_TOKEN } });
+        if (!resp.ok) return [];
+        var data = await resp.json();
+        return JSON.parse(decodeURIComponent(escape(atob(data.content))));
+      } catch { return []; }
+    }
+
+    async function saveMoments(moment) {
+      var existing = await loadAllMoments();
+      existing.unshift(moment);
+      var sha = null;
+      try { var r = await fetch(API_BASE + '/moments.json', { headers: { 'Authorization': 'token ' + GH_TOKEN } }); if (r.ok) sha = (await r.json()).sha; } catch(e) {}
+      var body = { message: 'New moment', content: btoa(unescape(encodeURIComponent(JSON.stringify(existing)))) };
+      if (sha) body.sha = sha;
+      await fetch(API_BASE + '/moments.json', { method: 'PUT', headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    }
+
+    async function saveAllMoments(existing) {
+      var sha = null;
+      try { var r = await fetch(API_BASE + '/moments.json', { headers: { 'Authorization': 'token ' + GH_TOKEN } }); if (r.ok) sha = (await r.json()).sha; } catch(e) {}
+      var body = { message: 'Update moment', content: btoa(unescape(encodeURIComponent(JSON.stringify(existing)))) };
+      if (sha) body.sha = sha;
+      await fetch(API_BASE + '/moments.json', { method: 'PUT', headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    }
+
+    async function toggleLike(momentId) {
+      if (!myName) { showNamePrompt(); return; }
+      var all = await loadAllMoments();
+      var m = all.find(function(x) { return x.id === momentId; });
+      if (!m) return;
+      var idx = m.likes.indexOf(myName);
+      if (idx >= 0) m.likes.splice(idx, 1); else m.likes.push(myName);
+      await saveAllMoments(all);
+      renderMoments();
+    }
+
+    async function addComment(momentId, inputEl) {
+      if (!myName) { showNamePrompt(); return; }
+      var text = inputEl.value.trim();
+      if (!text) return;
+      var all = await loadAllMoments();
+      var m = all.find(function(x) { return x.id === momentId; });
+      if (!m) return;
+      m.comments.push({ author: myName, text: text, time: new Date().toLocaleString('zh-CN') });
+      await saveAllMoments(all);
+      renderMoments();
+    }
+
+    function renderMoments() {
+      var feed = document.getElementById('momentFeed');
+      loadAllMoments().then(function(moments) {
+        allMoments = moments || [];
+        if (!allMoments.length) { feed.innerHTML = '<p style="text-align:center;color:var(--warm-brown);padding:40px 0;font-size:14px;">No moments yet. Be the first to post!</p>'; return; }
+        feed.innerHTML = '';
+        allMoments.forEach(function(m) {
+          var card = document.createElement('div');
+          card.className = 'moment-card';
+          var html = '<div class="moment-header"><div class="moment-avatar">' + (m.author || '?')[0] + '</div><div><div class="moment-author">' + (m.author || 'Anon') + '</div><div class="moment-time">' + m.time + '</div></div></div>';
+          if (m.text) html += '<div class="moment-text">' + escapeHtml(m.text) + '</div>';
+          if (m.images && m.images.length) {
+            html += '<div class="moment-images">';
+            m.images.forEach(function(img) { html += '<img src="' + img + '" onclick="openLightboxMoment(this.src)" loading="lazy" />'; });
+            html += '</div>';
+          }
+          html += '<div class="moment-actions">';
+          var liked = m.likes && m.likes.indexOf(myName) >= 0;
+          html += '<button class="moment-like-btn' + (liked ? ' liked' : '') + '" onclick="toggleLike('' + m.id + '')">' + (liked ? '❤️' : '🤍') + ' ' + (m.likes ? m.likes.length : 0) + '</button>';
+          html += '<button class="moment-comment-btn" onclick="this.parentElement.nextElementSibling.nextElementSibling.querySelector('input').focus()">💬 ' + (m.comments ? m.comments.length : 0) + '</button>';
+          html += '</div>';
+          html += '<div class="moment-comments">';
+          if (m.comments) m.comments.forEach(function(c) {
+            html += '<div class="moment-comment"><span class="moment-comment-author">' + c.author + ':</span><span class="moment-comment-text">' + c.text + '</span></div>';
+          });
+          html += '</div>';
+          html += '<div class="moment-comment-input"><input type="text" placeholder="Comment..."/><button onclick="addComment('' + m.id + '', this.previousElementSibling)">Send</button></div>';
+          card.innerHTML = html;
+          feed.appendChild(card);
+        });
+      });
+    }
+
+    function openLightboxMoment(src) {
+      var lb = document.getElementById('lightbox');
+      var img = document.getElementById('lbImg');
+      var cap = document.getElementById('lbCaption');
+      lb.classList.add('open');
+      img.src = src;
+      img.style.display = '';
+      cap.textContent = '';
+      cap.style.display = 'none';
+    }
+
+    function escapeHtml(t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+    
     // ==================== INIT ====================
     let allPhotos = [];
     let allMessages = [];
@@ -1267,6 +1460,7 @@
       } catch(e) {}
       renderAlbum();
       renderAlbumCovers();
+      if (document.getElementById('momentFeed').children.length === 1 && document.getElementById('momentFeed').children[0].textContent === 'Loading...') renderMoments();
       
     })();
 
