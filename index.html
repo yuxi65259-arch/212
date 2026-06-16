@@ -1344,15 +1344,26 @@
       if (!myName) { showNamePrompt(); return; }
       var all = await loadMoments(); var m = all.find(function(x) { return x.id === mid; }); if (!m) return;
       var idx = m.likes.indexOf(myName); if (idx >= 0) m.likes.splice(idx, 1); else m.likes.push(myName);
-      await saveAllMoments(all); renderMomentFeed();
+      await saveAllMoments(all);
+      // Re-render with updated local data (avoid API re-fetch)
+      renderMomentFeedWithData(all);
     }
     async function addMomentComment(mid, inp) {
       if (!myName) { showNamePrompt(); return; }
       var t = inp.value.trim(); if (!t) return;
       var all = await loadMoments(); var m = all.find(function(x) { return x.id === mid; }); if (!m) return;
       m.comments.push({ author: myName, text: t, time: new Date().toLocaleString('zh-CN') });
-      await saveAllMoments(all); renderMomentFeed();
+      await saveAllMoments(all);
+      renderMomentFeedWithData(all);
     }
+    async function deleteMoment(mid) {
+      if (!confirm('Delete this moment?')) return;
+      var all = await loadMoments();
+      all = all.filter(function(x) { return x.id !== mid; });
+      await saveAllMoments(all);
+      renderMomentFeedWithData(all);
+    }
+
     async function saveAllMoments(all) {
       var sha = null; try { var r = await fetch(API_BASE + '/moments.json', { headers: { 'Authorization': 'token ' + GH_TOKEN } }); if (r.ok) sha = (await r.json()).sha; } catch(e) {}
       var body = { message: 'Update moments', content: btoa(unescape(encodeURIComponent(JSON.stringify(all)))) };
@@ -1361,7 +1372,11 @@
     }
     function renderMomentFeed() {
       var feed = document.getElementById('momentFeed');
-      loadMoments().then(function(moments) {
+      loadMoments().then(function(moments) { renderMomentFeedWithData(moments); });
+    }
+
+    function renderMomentFeedWithData(moments) {
+      var feed = document.getElementById('momentFeed');
         if (!moments.length) { feed.innerHTML = '<p class="moment-empty">No moments yet. Be the first to post!</p>'; return; }
         feed.innerHTML = '';
         moments.forEach(function(m) {
@@ -1413,10 +1428,11 @@
           var ci = document.createElement('div'); ci.className = 'moment-cmt-input';
           var inp = document.createElement('input'); inp.type = 'text'; inp.placeholder = 'Comment...';
           var btn = document.createElement('button'); btn.textContent = 'Send';
+      // Delete button (only for own posts)
+      if (m.author === myName) { var delBtn = document.createElement('button'); delBtn.textContent = 'Delete'; delBtn.style.cssText = 'margin-left:auto;padding:4px 10px;border-radius:8px;border:none;background:transparent;color:var(--warm-brown);font-size:11px;cursor:pointer;'; delBtn.onclick = function() { deleteMoment(m.id); }; card.querySelector('.moment-header').appendChild(delBtn); }
           btn.onclick = function() { addMomentComment(m.id, inp); };
           ci.appendChild(inp); ci.appendChild(btn); card.appendChild(ci);
           feed.appendChild(card);
-        });
       });
     }
     function escapeHtml(t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
