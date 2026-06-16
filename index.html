@@ -846,6 +846,7 @@
 
         if (hasImg) {
           const imgEl = document.createElement('img');
+          imgEl.crossOrigin = 'anonymous';
           imgEl.src = photo.url;
           imgEl.alt = photo.label || '';
           imgEl.loading = 'lazy';
@@ -1253,6 +1254,8 @@
     document.addEventListener('keydown', function(e) { if (e.key === 'Enter' && document.getElementById('namePrompt')?.style.display === 'flex') setName(); });
     // ==================== FACE DETECTION ====================
     var faceReady = false;
+    // Force CPU backend to avoid WebGL tainted canvas errors
+    if (typeof tf !== 'undefined') { tf.ready().then(function() { try { tf.setBackend('cpu'); console.log('[face] CPU backend set'); } catch(e) {} }); }
     var faceData = JSON.parse(localStorage.getItem('dorm212_faces') || '{}');
     var faceFilter = '';
     var faceQueue = [];
@@ -1276,7 +1279,13 @@
     async function detectFacesForPhoto(photo, img) {
       if (!faceReady) return;
       try {
-        var det = await faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 256, scoreThreshold: 0.5 })).withFaceLandmarks().withFaceDescriptors();
+        // Re-draw to clean canvas to avoid tainted canvas
+        var cleanCanvas = document.createElement('canvas');
+        cleanCanvas.width = img.naturalWidth || img.width || 200;
+        cleanCanvas.height = img.naturalHeight || img.height || 200;
+        var cc = cleanCanvas.getContext('2d');
+        cc.drawImage(img, 0, 0);
+        var det = await faceapi.detectAllFaces(cleanCanvas, new faceapi.TinyFaceDetectorOptions({ inputSize: 256, scoreThreshold: 0.5 })).withFaceLandmarks().withFaceDescriptors();
         if (!det.length) return;
         photo.hasFace = true;
         photo.faceDescriptors = det.map(function(d) { return Array.from(d.descriptor); });
@@ -1330,7 +1339,7 @@
         while (faceQueue.length > 0) {
           var item = faceQueue.shift();
           var img = document.getElementById('face-img-' + item.id);
-          if (!img) { img = new Image(); img.src = item.url; await new Promise(function(r) { img.onload = r; }); }
+          if (!img) { img = new Image(); img.crossOrigin = 'anonymous'; img.src = item.url; await new Promise(function(r) { img.onload = r; }); }
           await detectFacesForPhoto(item.photo, img);
           await new Promise(function(r) { setTimeout(r, 50); });
         }
