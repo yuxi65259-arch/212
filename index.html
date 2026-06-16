@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>212 宿舍 · 毕业纪念册</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet" />
-  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.14/dist/face-api.js"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; }
@@ -1268,7 +1268,7 @@
       if (faceReady) return true;
       if (typeof faceapi === 'undefined') { console.log('[face] faceapi not loaded'); return false; }
       try {
-        var MU = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/';
+        var MU = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.14/model/';
         console.log('[face] Loading models from', MU);
         await faceapi.nets.tinyFaceDetector.loadFromUri(MU);
         await faceapi.nets.faceLandmark68Net.loadFromUri(MU);
