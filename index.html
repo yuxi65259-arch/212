@@ -1077,23 +1077,33 @@
 
       var batch = [];
       var failed = 0;
-      var skipped = 0;
       var total = pendingFiles.length;
 
+      // Step 1: Upload all image files
       for (var i = 0; i < total; i++) {
         var file = pendingFiles[i];
         var pct = Math.round(((i + 1) / total) * 100);
         if (progBar) progBar.style.width = pct + '%';
         status.textContent = 'Uploading ' + (i+1) + '/' + total + ' (' + pct + '%) - ' + file.name;
 
-        // Auto-retry up to 2 times
         var retries = 0;
         var uploaded = false;
         while (retries < 3 && !uploaded) {
           try {
             var dataUrl = await compressImage(file);
-            var result = await uploadToServer(dataUrl, category, file.name);
-            batch.push(result);
+            var base64 = dataUrl.split(',')[1];
+            var filename = 'photo_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6) + '.jpg';
+            var fileResp = await fetch(API_BASE + '/photos/' + filename, {
+              method: 'PUT', headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ message: 'Add ' + filename, content: base64 })
+            });
+            if (!fileResp.ok) throw new Error('Upload failed: ' + fileResp.status);
+            var fileData = await fileResp.json();
+            batch.push({
+              id: 'p' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+              cat: category, url: fileData.content.download_url, api_url: fileData.content.git_url,
+              label: file.name, date: new Date().toISOString().slice(0, 10), uploader: myName || ''
+            });
             uploaded = true;
           } catch(e) {
             retries++;
@@ -1101,12 +1111,26 @@
             else { status.textContent = 'Retrying ' + file.name + ' (' + retries + '/2)...'; await new Promise(function(r) { setTimeout(r, 2000); }); }
           }
         }
-
-        // Delay between uploads to avoid rate limiting (1s per file)
-        await new Promise(function(r) { setTimeout(r, 1000); });
+        await new Promise(function(r) { setTimeout(r, 100); });
       }
 
+      // Step 2: Batch update photos.json ONCE
       if (batch.length > 0) {
+        status.textContent = 'Saving photo list...';
+        var allExisting = [];
+        try {
+          var existingResp = await fetch(API_BASE + '/photos.json', { headers: { 'Authorization': 'token ' + GH_TOKEN } });
+          if (existingResp.ok) {
+            var ed = await existingResp.json();
+            allExisting = JSON.parse(decodeURIComponent(escape(atob(ed.content))));
+          }
+        } catch(e) {}
+        var merged = allExisting.concat(batch);
+        var sha = null;
+        try { var sr = await fetch(API_BASE + '/photos.json', { headers: { 'Authorization': 'token ' + GH_TOKEN } }); if (sr.ok) sha = (await sr.json()).sha; } catch(e) {}
+        var updateBody = { message: 'Batch add ' + batch.length + ' photos', content: btoa(unescape(encodeURIComponent(JSON.stringify(merged)))) };
+        if (sha) updateBody.sha = sha;
+        await fetch(API_BASE + '/photos.json', { method: 'PUT', headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(updateBody) });
         allPhotos = allPhotos.concat(batch);
         renderAlbum();
         renderAlbumCovers();
@@ -1117,387 +1141,3 @@
       console.log('[upload] Complete: ' + success + ' success, ' + failed + ' failed');
       setTimeout(function() { status.style.display = 'none'; if (prog) prog.style.display = 'none'; }, 5000);
     }
-    // ==================== END UPLOAD ====================
-
-    // ==================== ALBUM NAVIGATION ====================
-    const albumMeta = [
-      { id: 'daily', name: '宿舍日常', icon: '🏠', img: 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=600&h=400&fit=crop', desc: '温暖日常' },
-      { id: 'outing', name: '一起出去玩', icon: '🌄', img: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=400&fit=crop', desc: '山川湖海' },
-      { id: 'graduation', name: '毕业季', icon: '🎓', img: 'https://images.unsplash.com/photo-1523050854058-8df90110c7f1?w=600&h=400&fit=crop', desc: '青春万岁' },
-      { id: 'funny', name: '搞怪合集', icon: '😂', img: 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?w=600&h=400&fit=crop', desc: '快乐时光' },
-    ];
-
-    function renderAlbumCovers() {
-      const container = document.getElementById('albumCovers');
-      const photos = [...samplePhotos, ...allPhotos];
-      container.innerHTML = '';
-      albumMeta.forEach(album => {
-        const count = photos.filter(p => p.cat === album.id).length;
-        const card = document.createElement('div');
-        card.className = 'album-cover tilt-card';
-        card.innerHTML = '<div class="album-cover-img"><img src="' + album.img + '" alt="' + album.name + '" loading="lazy" /><div class="album-cover-overlay"></div><div class="album-cover-icon">' + album.icon + '</div></div>' +
-          '<div class="album-cover-name">' + album.name + '</div>' +
-	          '<div class="album-cover-desc">' + album.desc + '</div>' +
-          '<div class="album-cover-count">' + count + ' 张照片</div>';
-        card.onclick = function() { openAlbum(album.id, album.name, album.icon); };
-        container.appendChild(card);
-      });
-    }
-
-    function openAlbum(id, name, icon) {
-      currentAlbum = id;
-      currentFilter = id;
-      VISIBLE_COUNT = 50;
-      faceFilter = '';
-      document.getElementById('albumListView').style.display = 'none';
-      document.getElementById('albumDetailView').style.display = 'block';
-      document.getElementById('albumDetailIcon').textContent = icon || '';
-      document.getElementById('albumDetailTitle').textContent = name;
-      var zt = document.getElementById('uploadZoneText');
-      if (zt) zt.textContent = '点击上传照片到 ' + name;
-      renderAlbum();
-    }
-
-    document.getElementById('backToAlbums').addEventListener('click', () => {
-      currentFilter = 'all';
-      document.getElementById('albumDetailView').style.display = 'none';
-      document.getElementById('albumListView').style.display = 'block';
-      renderAlbumCovers();
-    });
-
-    // ==================== LIGHTBOX ====================
-    function closeLightbox() {
-      document.getElementById('lightbox').classList.remove('open');
-    }
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
-
-    // ==================== MESSAGES ====================
-    async function loadMessages() {
-      try {
-        const resp = await fetch(API_BASE + '/messages.json', {
-          headers: { 'Authorization': 'token ' + GH_TOKEN }
-        });
-        if (!resp.ok) return [];
-        const data = await resp.json();
-        return JSON.parse(decodeURIComponent(escape(atob(data.content))));
-      } catch { return []; }
-    }
-
-    async function saveMessages(msgs) {
-      let sha;
-      try {
-        const existing = await fetch(API_BASE + '/messages.json', {
-          headers: { 'Authorization': 'token ' + GH_TOKEN }
-        });
-        if (existing.ok) sha = (await existing.json()).sha;
-      } catch(e) {}
-
-      const content = btoa(unescape(encodeURIComponent(JSON.stringify(msgs, null, 2))));
-      const body = { message: 'Update messages', content: content };
-      if (sha) body.sha = sha;
-      await fetch(API_BASE + '/messages.json', {
-        method: 'PUT',
-        headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-    }
-
-    async function postMessage() {
-      const input = document.getElementById('msgInput');
-      const text = input.value.trim();
-      if (!text) return;
-      const isAnon = document.getElementById('anonCheck').checked;
-      const now = new Date();
-      const dateStr = now.getFullYear() + '.' + String(now.getMonth()+1).padStart(2,'0') + '.' + String(now.getDate()).padStart(2,'0');
-
-      const msg = {
-        id: 'm' + Date.now(),
-        author: isAnon ? '匿名' : myName,
-        time: dateStr,
-        content: escapeHtml(text)
-      };
-
-      try {
-        const existing = await loadMessages();
-        existing.push(msg);
-        await saveMessages(existing);
-        renderMessages(existing);
-      } catch(e) {
-        // Fallback: show locally
-        const list = document.getElementById('msgList');
-        const card = document.createElement('div');
-        card.className = 'msg-card';
-        card.innerHTML = '<div class="msg-header"><span class="msg-author">' + msg.author + '</span><span class="msg-time">' + msg.time + '</span></div><div class="msg-content">' + msg.content + '</div>';
-        list.prepend(card);
-      }
-
-      input.value = '';
-    }
-
-    function renderMessages(msgs) {
-      const list = document.getElementById('msgList');
-      list.innerHTML = '';
-      msgs.slice().reverse().forEach(m => {
-        const card = document.createElement('div');
-        card.className = 'msg-card';
-        card.innerHTML = '<div class="msg-header"><span class="msg-author">' + m.author + '</span><span class="msg-time">' + m.time + '</span></div><div class="msg-content">' + m.content + '</div>';
-        list.appendChild(card);
-      });
-    }
-
-    function escapeHtml(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
-
-    // ==================== CURSOR GLOW ====================
-    const cg = document.getElementById('cursorGlow');
-    let ct;
-    document.addEventListener('mousemove', e => { cg.style.left = e.clientX + 'px'; cg.style.top = e.clientY + 'px'; cg.classList.add('visible'); clearTimeout(ct); ct = setTimeout(() => cg.classList.remove('visible'), 2000); });
-    document.addEventListener('mouseleave', () => cg.classList.remove('visible'));
-
-    // ==================== SCROLL PROGRESS ====================
-    const sb = document.getElementById('scrollProgress');
-    window.addEventListener('scroll', () => { const h = document.documentElement; sb.style.width = ((h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100) + '%'; });
-
-    // ==================== STAGGERED REVEAL ====================
-    if (window.IntersectionObserver) {
-      const obs = new IntersectionObserver(entries => { entries.forEach(e => { if (e.isIntersecting) { e.target.style.animationPlayState = 'running'; obs.unobserve(e.target); } }); }, { threshold: 0.1 });
-      document.querySelectorAll('.stat-card, .album-cover, .roommate-card, .tl-item, .joke-card').forEach(el => { el.style.animationPlayState = 'paused'; obs.observe(el); });
-    }
-
-    // ==================== SPATIAL EFFECTS ====================
-    // Floating sparkle particles
-    (function createSparkles() {
-      for (let i = 0; i < 15; i++) {
-        const s = document.createElement('div');
-        s.className = 'sparkle';
-        s.style.left = Math.random() * 100 + '%';
-        s.style.width = s.style.height = (2 + Math.random() * 3) + 'px';
-        s.style.animationDuration = (6 + Math.random() * 8) + 's';
-        s.style.animationDelay = (Math.random() * 10) + 's';
-        document.body.appendChild(s);
-      }
-    })();
-
-    // 3D tilt effect on album covers
-    document.querySelectorAll('.album-cover').forEach(el => {
-      el.addEventListener('mousemove', e => {
-        const rect = el.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width - 0.5;
-        const y = (e.clientY - rect.top) / rect.height - 0.5;
-        el.style.setProperty('--rx', (-y * 18) + 'deg');
-        el.style.setProperty('--ry', (x * 18) + 'deg');
-      });
-      el.addEventListener('mouseleave', () => {
-        el.style.setProperty('--rx', '0deg');
-        el.style.setProperty('--ry', '0deg');
-      });
-    });
-
-    // Tilt effect also on stat cards
-    document.querySelectorAll('.stat-card').forEach(el => {
-      el.addEventListener('mousemove', e => {
-        const rect = el.getBoundingClientRect();
-        el.style.setProperty('--rx', ((-(e.clientY - rect.top) / rect.height + 0.5) * 8) + 'deg');
-        el.style.setProperty('--ry', (((e.clientX - rect.left) / rect.width - 0.5) * 8) + 'deg');
-      });
-      el.addEventListener('mouseleave', () => {
-        el.style.setProperty('--rx', '0deg');
-        el.style.setProperty('--ry', '0deg');
-      });
-    });
-
-    // ==================== MUSIC ====================
-    let musicPlaying = false;
-    function toggleMusic() {
-      musicPlaying = !musicPlaying;
-      document.getElementById('musicBtn').classList.toggle('playing');
-      document.getElementById('musicBtn').textContent = musicPlaying ? '♬' : '♫';
-    }
-
-    let myName = localStorage.getItem('dorm212_name') || '';
-    updateNameDisplay();
-    function showNamePrompt() { var p = document.getElementById('namePrompt'); if (p) p.style.display = 'flex'; }
-    function setName() { var inp = document.getElementById('nameInput'); var n = inp.value.trim(); if (!n) { inp.style.borderColor = '#e74c3c'; return; } myName = n; localStorage.setItem('dorm212_name', n); document.getElementById('namePrompt').style.display = 'none'; updateNameDisplay(); }
-    function editMyName() { document.getElementById('nameInput').value = myName || ''; showNamePrompt(); }
-    function updateNameDisplay() { var d = document.getElementById('nameDisplay'); if (d) d.textContent = myName || '点击设置名字'; }
-    document.addEventListener('keydown', function(e) { if (e.key === 'Enter' && document.getElementById('namePrompt')?.style.display === 'flex') setName(); });
-    // ==================== MOMENTS (WeChat-style feed) ====================
-    var momentImages = [];
-
-    // Drag and drop images into moment post box
-    (function() {
-      var box = document.querySelector('.moment-post-box');
-      if (box) {
-        box.addEventListener('dragover', function(e) { e.preventDefault(); box.style.borderColor = 'var(--golden)'; });
-        box.addEventListener('dragleave', function(e) { box.style.borderColor = ''; });
-        box.addEventListener('drop', function(e) {
-          e.preventDefault(); box.style.borderColor = '';
-          var fs = Array.from(e.dataTransfer.files).filter(function(f) { return f.type.startsWith('image/'); });
-          fs.forEach(function(f) { var r = new FileReader(); r.onload = function(ev) { momentImages.push(ev.target.result); renderMP(); }; r.readAsDataURL(f); });
-        });
-      }
-    })();
-
-    function handleMomentImages(e) {
-      var fs = Array.from(e.target.files).filter(function(f) { return f.type.startsWith('image/'); });
-      fs.forEach(function(f) { var r = new FileReader(); r.onload = function(ev) { momentImages.push(ev.target.result); renderMP(); }; r.readAsDataURL(f); });
-      e.target.value = '';
-    }
-    function renderMP() {
-      var p = document.getElementById('momentPreview'); p.innerHTML = '';
-      momentImages.forEach(function(img, i) {
-        var w = document.createElement('div'); w.className = 'moment-preview-wrap';
-        w.innerHTML = '<img class="moment-preview-img" src="' + img + '" /><button class="moment-preview-del" onclick="momentImages.splice(' + i + ',1);renderMP();">x</button>';
-        p.appendChild(w);
-      });
-    }
-    async function postMoment() {
-      var t = document.getElementById('momentText').value.trim();
-      if (!t && !momentImages.length) return;
-      if (!myName) { showNamePrompt(); return; }
-      var cimgs = [];
-      for (var i = 0; i < momentImages.length; i++) {
-        var img = new Image(); img.src = momentImages[i];
-        await new Promise(function(r) { img.onload = r; });
-        var M = 2000, w = img.naturalWidth, h = img.naturalHeight;
-        if (w > M || h > M) { if (w > h) { h = h * M / w; w = M; } else { w = w * M / h; h = M; } }
-        var cv = document.createElement('canvas'); cv.width = w; cv.height = h; cv.getContext('2d').drawImage(img, 0, 0, w, h);
-        cimgs.push(cv.toDataURL('image/jpeg', 0.85));
-      }
-      var mom = { id: 'md' + Date.now(), author: myName, time: new Date().toLocaleString('zh-CN'), text: t, images: cimgs, likes: [], comments: [] };
-      try { await saveMoment(mom); momentImages = []; renderMP(); document.getElementById('momentText').value = ''; renderMomentFeed(); }
-      catch(ex) { alert('Publish failed: ' + ex.message); }
-    }
-    async function loadMoments() {
-      try { var r = await fetch(API_BASE + '/moments.json', { headers: { 'Authorization': 'token ' + GH_TOKEN } }); if (!r.ok) return []; return JSON.parse(decodeURIComponent(escape(atob((await r.json()).content)))); }
-      catch(e) { return []; }
-    }
-    async function saveMoment(m) {
-      var all = await loadMoments(); all.unshift(m);
-      var sha = null; try { var r = await fetch(API_BASE + '/moments.json', { headers: { 'Authorization': 'token ' + GH_TOKEN } }); if (r.ok) sha = (await r.json()).sha; } catch(e) {}
-      var body = { message: 'New moment', content: btoa(unescape(encodeURIComponent(JSON.stringify(all)))) };
-      if (sha) body.sha = sha;
-      await fetch(API_BASE + '/moments.json', { method: 'PUT', headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    }
-    async function toggleMomentLike(mid) {
-      if (!myName) { showNamePrompt(); return; }
-      var all = await loadMoments(); var m = all.find(function(x) { return x.id === mid; }); if (!m) return;
-      var idx = m.likes.indexOf(myName); if (idx >= 0) m.likes.splice(idx, 1); else m.likes.push(myName);
-      await saveAllMoments(all);
-      // Re-render with updated local data (avoid API re-fetch)
-      renderMomentFeedWithData(all);
-    }
-    async function addMomentComment(mid, inp) {
-      if (!myName) { showNamePrompt(); return; }
-      var t = inp.value.trim(); if (!t) return;
-      var all = await loadMoments(); var m = all.find(function(x) { return x.id === mid; }); if (!m) return;
-      m.comments.push({ author: myName, text: t, time: new Date().toLocaleString('zh-CN') });
-      await saveAllMoments(all);
-      renderMomentFeedWithData(all);
-    }
-    async function deleteMoment(mid) {
-      if (!confirm('Delete this moment?')) return;
-      var all = await loadMoments();
-      all = all.filter(function(x) { return x.id !== mid; });
-      await saveAllMoments(all);
-      renderMomentFeedWithData(all);
-    }
-
-    async function saveAllMoments(all) {
-      var sha = null; try { var r = await fetch(API_BASE + '/moments.json', { headers: { 'Authorization': 'token ' + GH_TOKEN } }); if (r.ok) sha = (await r.json()).sha; } catch(e) {}
-      var body = { message: 'Update moments', content: btoa(unescape(encodeURIComponent(JSON.stringify(all)))) };
-      if (sha) body.sha = sha;
-      await fetch(API_BASE + '/moments.json', { method: 'PUT', headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    }
-    function renderMomentFeed() {
-      var feed = document.getElementById('momentFeed');
-      loadMoments().then(function(moments) { renderMomentFeedWithData(moments); });
-    }
-
-    function renderMomentFeedWithData(moments) {
-      var feed = document.getElementById('momentFeed');
-        if (!moments.length) { feed.innerHTML = '<p class="moment-empty">No moments yet. Be the first to post!</p>'; return; }
-        feed.innerHTML = '';
-        moments.forEach(function(m) {
-          var card = document.createElement('div'); card.className = 'moment-card';
-          // Header
-          var hdr = document.createElement('div'); hdr.className = 'moment-header';
-          var av = document.createElement('div'); av.className = 'moment-avatar'; av.textContent = (m.author || '?')[0];
-          var info = document.createElement('div'); info.innerHTML = '<div class="moment-author">' + (m.author || 'Anon') + '</div><div class="moment-time">' + m.time + '</div>';
-          hdr.appendChild(av); hdr.appendChild(info); card.appendChild(hdr);
-          // Text
-          if (m.text) { var txt = document.createElement('div'); txt.className = 'moment-text'; txt.textContent = m.text; card.appendChild(txt); }
-          // Images
-          if (m.images && m.images.length) {
-            var imgs = document.createElement('div'); imgs.className = 'moment-images n' + Math.min(m.images.length, 9);
-            m.images.forEach(function(img) {
-              var el = document.createElement('img'); el.src = img; el.loading = 'lazy';
-              el.onclick = function() {
-                var lb = document.getElementById('lightbox'); lb.classList.add('open');
-                var i = document.getElementById('lbImg'); i.src = img; i.style.display = '';
-                document.getElementById('lbCaption').textContent = '';
-              };
-              imgs.appendChild(el);
-            });
-            card.appendChild(imgs);
-          }
-          // Actions
-          var acts = document.createElement('div'); acts.className = 'moment-actions';
-          var liked = m.likes && m.likes.indexOf(myName) >= 0;
-          var likeBtn = document.createElement('button'); likeBtn.className = 'moment-like-btn' + (liked ? ' liked' : '');
-          likeBtn.textContent = (liked ? '\u2764\ufe0f' : '\u2661') + ' ' + (m.likes ? m.likes.length : 0);
-          likeBtn.onclick = function() { toggleMomentLike(m.id); };
-          acts.appendChild(likeBtn);
-          acts.appendChild(function() {
-            var btn = document.createElement('button'); btn.className = 'moment-cmt-btn';
-            btn.textContent = '\ud83d\udcac ' + (m.comments ? m.comments.length : 0);
-            btn.onclick = function() { var i = this.parentElement.parentElement.querySelector('.moment-cmt-input input'); if (i) i.focus(); };
-            return btn;
-          }());
-          card.appendChild(acts);
-          // Comments
-          var cmts = document.createElement('div'); cmts.className = 'moment-comments';
-          if (m.comments) m.comments.forEach(function(c) {
-            var ce = document.createElement('div'); ce.className = 'moment-comment';
-            ce.innerHTML = '<b>' + c.author + '</b> ' + c.text;
-            cmts.appendChild(ce);
-          });
-          card.appendChild(cmts);
-          // Comment input
-          var ci = document.createElement('div'); ci.className = 'moment-cmt-input';
-          var inp = document.createElement('input'); inp.type = 'text'; inp.placeholder = 'Comment...';
-          var btn = document.createElement('button'); btn.textContent = 'Send';
-      // Delete button (only for own posts)
-      if (m.author === myName) { var delBtn = document.createElement('button'); delBtn.textContent = 'Delete'; delBtn.style.cssText = 'margin-left:auto;padding:4px 10px;border-radius:8px;border:none;background:transparent;color:var(--warm-brown);font-size:11px;cursor:pointer;'; delBtn.onclick = function() { deleteMoment(m.id); }; card.querySelector('.moment-header').appendChild(delBtn); }
-          btn.onclick = function() { addMomentComment(m.id, inp); };
-          ci.appendChild(inp); ci.appendChild(btn); card.appendChild(ci);
-          feed.appendChild(card);
-      });
-    }
-    function escapeHtml(t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
-
-    // ==================== INIT ====================
-    let allPhotos = [];
-    let allMessages = [];
-    (async function init() {
-      try {
-        const photos = await fetchPhotos();
-        if (photos && photos.length) allPhotos = photos;
-      } catch(e) {}
-      try {
-        const msgs = await loadMessages();
-        if (msgs && msgs.length) {
-          allMessages = msgs;
-          renderMessages(msgs);
-        }
-      } catch(e) {}
-      renderAlbum();
-      renderAlbumCovers();
-      setTimeout(function() { renderMomentFeed(); }, 500);
-      
-    })();
-
-    console.log('🎓 212 宿舍毕业纪念册 — 我们的小窝');
-    console.log('📖 永远记得这段时光 ❤️');
-  </script>
-</body>
-</html>
