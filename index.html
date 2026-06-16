@@ -1299,6 +1299,21 @@
     document.addEventListener('keydown', function(e) { if (e.key === 'Enter' && document.getElementById('namePrompt')?.style.display === 'flex') setName(); });
     // ==================== MOMENTS (WeChat-style feed) ====================
     var momentImages = [];
+
+    // Drag and drop images into moment post box
+    (function() {
+      var box = document.querySelector('.moment-post-box');
+      if (box) {
+        box.addEventListener('dragover', function(e) { e.preventDefault(); box.style.borderColor = 'var(--golden)'; });
+        box.addEventListener('dragleave', function(e) { box.style.borderColor = ''; });
+        box.addEventListener('drop', function(e) {
+          e.preventDefault(); box.style.borderColor = '';
+          var fs = Array.from(e.dataTransfer.files).filter(function(f) { return f.type.startsWith('image/'); });
+          fs.forEach(function(f) { var r = new FileReader(); r.onload = function(ev) { momentImages.push(ev.target.result); renderMP(); }; r.readAsDataURL(f); });
+        });
+      }
+    })();
+
     function handleMomentImages(e) {
       var fs = Array.from(e.target.files).filter(function(f) { return f.type.startsWith('image/'); });
       fs.forEach(function(f) { var r = new FileReader(); r.onload = function(ev) { momentImages.push(ev.target.result); renderMP(); }; r.readAsDataURL(f); });
