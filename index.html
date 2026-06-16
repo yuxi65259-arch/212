@@ -866,7 +866,7 @@
           };
           item.appendChild(imgEl);
           item.classList.add('landscape');
-          if (!photo.isSample && !photo.hasOwnProperty('hasFace')) { queueFace(photo); }
+          if (!photo.isSample && !photo.faceDescriptors) { queueFace(photo); }
         } else {
           const div = document.createElement('div');
           div.className = 'placeholder-img';
@@ -1275,6 +1275,7 @@
         await faceapi.nets.faceRecognitionNet.loadFromUri(MU);
         faceReady = true;
         console.log('[face] Models loaded OK');
+        setTimeout(function() { scanAllFaces(); }, 500);
         return true;
       } catch(e) { console.warn('[face] Model load error:', e.message); return false; }
     }
@@ -1352,6 +1353,7 @@
         }
         while (faceQueue.length > 0) {
           var item = faceQueue.shift();
+          console.log('[face] Processing: ' + (item.photo.label || item.photo.id) + ' (' + faceQueue.length + ' left in queue)');
           var img = document.getElementById('face-img-' + item.id);
           if (!img) { img = new Image(); img.crossOrigin = 'anonymous'; img.src = item.url; await new Promise(function(r) { img.onload = r; }); }
           await detectFacesForPhoto(item.photo, img);
@@ -1382,11 +1384,11 @@
     var personBar;
     function filterAll() { filterAll(); }
     function renderPersonBar() {
-      if (!personBar) { personBar = document.createElement('div'); personBar.className = 'person-bar'; var dv = document.getElementById('albumDetailView'); if (dv) { var title = document.getElementById('albumDetailTitle'); if (title && title.parentNode) title.parentNode.appendChild(personBar); } }
+      if (!personBar) { personBar = document.createElement('div'); personBar.className = 'person-bar'; personBar.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 16px;align-items:center;'; var dv = document.getElementById('albumDetailView'); if (dv) { var title = document.getElementById('albumDetailTitle'); if (title && title.parentNode) title.parentNode.appendChild(personBar); } }
       if (!personBar) return;
       var seen = {}; var ut = allFaceThumbs.filter(function(t, i, arr) { if (seen[t.tag]) return false; seen[t.tag] = true; return true; });
       ut.sort(function(a, b) { if (a.tag === 'Unknown') return 1; if (b.tag === 'Unknown') return -1; return a.tag.localeCompare(b.tag); });
-      var h = '<div class="face-avatar' + (faceFilter === '' ? ' active' : '') + '" onclick="filterPersonClick(event)" data-person="" style="background:var(--deep);color:#fff;font-size:11px;font-weight:bold;">All</div>';
+      var scanLabel = faceReady ? 'Re-scan' : 'Scan faces'; var h = '<button onclick="scanAllFaces()" style="padding:6px 14px;border-radius:100px;border:1px solid var(--glass-border);background:transparent;cursor:pointer;font-family:Inter,sans-serif;font-size:11px;color:var(--warm-brown);margin-right:8px;transition:all 0.3s;">' + scanLabel + '</button>'; h += '<div class="face-avatar' + (faceFilter === '' ? ' active' : '') + '" onclick="filterPersonClick(event)" data-person="" style="background:var(--deep);color:#fff;font-size:11px;font-weight:bold;">All</div>';
       ut.forEach(function(t) {
         if (t.tag === 'Unknown') { h += '<div class="face-avatar" onclick="nameUnknownPrompt()" title="Click to name">?</div>'; }
         else { h += '<div class="face-avatar' + (faceFilter === t.tag ? ' active' : '') + '" onclick="filterPersonClick(event)" data-person="' + t.tag + '"><img src="' + t.thumb + '" onerror="this.style.display=\'none\';this.parentElement.textContent=\'' + t.tag.charAt(0) + '\'" /></div>'; }
@@ -1396,6 +1398,10 @@
       personBar.innerHTML = h;
     }
 
+    function scanAllFaces() {
+      allPhotos.forEach(function(p) { if (!p.isSample) queueFace(p); });
+      console.log('[face] Scan triggered for ' + allPhotos.filter(function(p) { return !p.isSample; }).length + ' photos');
+    }
     function nameUnknownPrompt() { nameNextUnknown(); }
 
 
