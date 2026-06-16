@@ -943,6 +943,18 @@
       showCategoryPicker(files);
     }
 
+    // Recursively collect files from dirs and subdirs
+    function traverseDirEntry(entry, callback) {
+      if (entry.isFile) {
+        entry.file(function(file) { callback(file); });
+      } else if (entry.isDirectory) {
+        var reader = entry.createReader();
+        reader.readEntries(function(entries) {
+          entries.forEach(function(e) { traverseDirEntry(e, callback); });
+        });
+      }
+    }
+
     const uploadZone = document.getElementById('uploadZone');
     uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor = 'var(--golden)'; uploadZone.style.background = 'rgba(197, 169, 110, 0.1)'; });
     uploadZone.addEventListener('dragleave', e => { e.preventDefault(); uploadZone.style.borderColor = ''; uploadZone.style.background = ''; });
@@ -950,9 +962,31 @@
       e.preventDefault();
       uploadZone.style.borderColor = '';
       uploadZone.style.background = '';
-      var files = Array.from(e.dataTransfer.files).filter(isImage);
-      console.log('[drop] ' + files.length + ' images dropped');
-      if (files.length) showCategoryPicker(files);
+      var items = e.dataTransfer.items;
+      if (!items) { return; }
+      var allFiles = [];
+      var processed = 0;
+      // Walk entries recursively
+      for (var i = 0; i < items.length; i++) {
+        (function(idx) {
+          var entry = items[idx].webkitGetAsEntry ? items[idx].webkitGetAsEntry() : null;
+          if (entry) {
+            traverseDirEntry(entry, function(file) {
+              if (isImage(file)) allFiles.push(file);
+              processed++;
+            });
+          } else {
+            var f = items[idx].getAsFile();
+            if (f && isImage(f)) allFiles.push(f);
+            processed++;
+          }
+        })(i);
+      }
+      // Wait for directory traversal to complete (async)
+      setTimeout(function() {
+        console.log('[drop] ' + allFiles.length + ' images found (total ' + processed + ' entries)');
+        if (allFiles.length) showCategoryPicker(allFiles);
+      }, 300);
     });
 
     var pendingFiles = [];
