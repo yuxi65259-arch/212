@@ -1423,8 +1423,8 @@
 
     async function uploadBatchToServer(items, cat) {
       if (!IS_LOCAL) {
-        const uploaded = [];
-        for (const item of items) uploaded.push(await uploadToGitHub(item.image, cat, item.label));
+        var uploaded = [];
+        for (var i = 0; i < items.length; i++) { uploaded.push(await uploadFileOnlyToGitHub(items[i].image, cat, items[i].label)); }
         return { uploaded: uploaded, failed: [] };
       }
       const resp = await fetch('/api/upload-batch', {
@@ -1435,6 +1435,38 @@
       const data = await resp.json();
       if (!resp.ok && resp.status !== 207) throw new Error(data.error || 'Batch upload failed');
       return data;
+    }
+
+    // Upload file ONLY, no photos.json update (used for batch on GH Pages)
+    async function uploadFileOnlyToGitHub(dataUrl, cat, label) {
+      var base64 = dataUrl.split(',')[1];
+      var filename = 'photo_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6) + '.jpg';
+      var fileResp = await fetch(API_BASE + '/photos/' + filename, {
+        method: 'PUT', headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'Add ' + filename, content: base64 })
+      });
+      if (!fileResp.ok) throw new Error('Upload failed: ' + fileResp.status);
+      var fileData = await fileResp.json();
+      return {
+        id: 'p' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        cat: cat, url: fileData.content.download_url, api_url: fileData.content.git_url,
+        label: label, date: new Date().toISOString().slice(0, 10), uploader: myName || ''
+      };
+    }
+
+    // Batch update photos.json (used after multiple file uploads)
+    async function batchUpdatePhotosJson(newPhotos) {
+      var allExisting = [];
+      var sha;
+      try {
+        var r = await fetch(API_BASE + '/photos.json', { headers: { 'Authorization': 'token ' + GH_TOKEN } });
+        if (r.ok) { var d = await r.json(); allExisting = JSON.parse(decodeURIComponent(escape(atob(d.content)))); sha = d.sha; }
+      } catch(e) {}
+      var merged = allExisting.concat(newPhotos);
+      var updateBody = { message: 'Batch add ' + newPhotos.length + ' photos', content: btoa(unescape(encodeURIComponent(JSON.stringify(merged)))) };
+      if (sha) updateBody.sha = sha;
+      var putResp = await fetch(API_BASE + '/photos.json', { method: 'PUT', headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(updateBody) });
+      if (!putResp.ok) throw new Error('Failed to update photos.json: ' + putResp.status);
     }
 
     // GitHub API direct upload (used on GitHub Pages)
@@ -1809,6 +1841,12 @@
 
         var donePct = Math.round((processed / total) * 100);
         if (progBar) progBar.style.width = donePct + '%';
+      }
+
+      // Batch update photos.json once for GH Pages
+      if (!IS_LOCAL && uploadedPhotos.length > 0) {
+        status.textContent = 'Saving photo list...';
+        await batchUpdatePhotosJson(uploadedPhotos);
       }
 
       var success = total - failed;
