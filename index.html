@@ -1290,7 +1290,7 @@
         cleanCanvas.height = img.naturalHeight || img.height || 200;
         var cc = cleanCanvas.getContext('2d');
         cc.drawImage(img, 0, 0);
-        var det = await faceapi.detectAllFaces(cleanCanvas, new faceapi.TinyFaceDetectorOptions({ inputSize: 256, scoreThreshold: 0.5 })).withFaceLandmarks().withFaceDescriptors();
+        var det = await faceapi.detectAllFaces(cleanCanvas, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.3 })).withFaceLandmarks().withFaceDescriptors();
         if (!det.length) return;
         photo.hasFace = true;
         photo.faceDescriptors = det.map(function(d) { return Array.from(d.descriptor); });
@@ -1390,7 +1390,7 @@
       ut.sort(function(a, b) { if (a.tag === 'Unknown') return 1; if (b.tag === 'Unknown') return -1; return a.tag.localeCompare(b.tag); });
       var scanLabel = faceReady ? 'Re-scan' : 'Scan faces'; var h = '<button onclick="scanAllFaces()" style="padding:6px 14px;border-radius:100px;border:1px solid var(--glass-border);background:transparent;cursor:pointer;font-family:Inter,sans-serif;font-size:11px;color:var(--warm-brown);margin-right:8px;transition:all 0.3s;">' + scanLabel + '</button>'; h += '<div class="face-avatar' + (faceFilter === '' ? ' active' : '') + '" onclick="filterPersonClick(event)" data-person="" style="background:var(--deep);color:#fff;font-size:11px;font-weight:bold;">All</div>';
       ut.forEach(function(t) {
-        if (t.tag === 'Unknown') { h += '<div class="face-avatar" onclick="nameUnknownPrompt()" title="Click to name">?</div>'; }
+        if (t.tag === 'Unknown') { h += '<div class="face-avatar" onclick="nameUnknownPrompt(event)" title="Click to name">?</div>'; }
         else { h += '<div class="face-avatar' + (faceFilter === t.tag ? ' active' : '') + '" onclick="filterPersonClick(event)" data-person="' + t.tag + '"><img src="' + t.thumb + '" onerror="this.style.display=\'none\';this.parentElement.textContent=\'' + t.tag.charAt(0) + '\'" /></div>'; }
       });
       var unknown = allPhotos.filter(function(p) { return p.faceTags && p.faceTags.indexOf('Unknown') >= 0; }).length;
@@ -1402,11 +1402,11 @@
       allPhotos.forEach(function(p) { if (!p.isSample) queueFace(p); });
       console.log('[face] Scan triggered for ' + allPhotos.filter(function(p) { return !p.isSample; }).length + ' photos');
     }
-    function nameUnknownPrompt() { nameNextUnknown(); }
+    function nameUnknownPrompt(e) { if (e && e.shiftKey) { nameNextUnknown(); } else { filterPerson('Unknown'); } }
 
 
-    function filterPersonClick(e) { var p = e.target.getAttribute('data-person'); filterPerson(p); }
-    function filterPerson(n) { faceFilter = n; VISIBLE_COUNT = 50; renderAlbum(); renderPersonBar(); }
+    function filterPersonClick(e) { var p = e.currentTarget.getAttribute('data-person'); filterPerson(p); }
+    function filterPerson(n) { faceFilter = n; VISIBLE_COUNT = 50; renderAlbum(); renderPersonBar(); console.log('[face] Filtering by:', n); }
     function namePerson(id) { var n = prompt('Name this person (e.g. "Zhang San"):', ''); if (n && n.trim()) saveFaceData(id, n.trim()); }
     function nameNextUnknown() {
       var photo = allPhotos.find(function(p) { return p.faceTags && p.faceTags.indexOf('Unknown') >= 0; });
