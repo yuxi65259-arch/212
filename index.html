@@ -1460,138 +1460,6 @@
       visibility: visible !important;
     }
 
-    /* Ambient light, film dust, photo glow, processing upload */
-    @keyframes ambientDrift {
-      0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.34; }
-      50% { transform: translate3d(4vw, -3vh, 0) scale(1.08); opacity: 0.48; }
-    }
-    @keyframes dustFloat {
-      0% { transform: translate3d(0, 18px, 0) scale(var(--s)); opacity: 0; }
-      18%, 74% { opacity: 0.55; }
-      100% { transform: translate3d(18px, -46px, 0) scale(var(--s)); opacity: 0; }
-    }
-    @keyframes processingSweep {
-      from { transform: translateX(-120%); }
-      to { transform: translateX(220%); }
-    }
-    @keyframes photoReveal {
-      from { opacity: 0; transform: translateY(26px) scale(0.98); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
-    .ambient-glow {
-      position: fixed;
-      z-index: -1;
-      pointer-events: none;
-      border-radius: 999px;
-      filter: blur(58px);
-      mix-blend-mode: multiply;
-    }
-    .ambient-glow-a {
-      width: 38vw;
-      height: 38vw;
-      left: -12vw;
-      top: 22vh;
-      background: rgba(227,161,90,0.20);
-      animation: ambientDrift 18s ease-in-out infinite;
-    }
-    .ambient-glow-b {
-      width: 34vw;
-      height: 34vw;
-      right: -10vw;
-      bottom: 10vh;
-      background: rgba(133,175,203,0.22);
-      animation: ambientDrift 22s ease-in-out infinite reverse;
-    }
-    .film-dust {
-      position: fixed;
-      inset: 0;
-      z-index: 1;
-      pointer-events: none;
-      overflow: hidden;
-    }
-    .film-dust span {
-      position: absolute;
-      left: var(--x);
-      top: var(--y);
-      width: 3px;
-      height: 3px;
-      border-radius: 50%;
-      background: rgba(255,253,248,0.72);
-      box-shadow: 0 0 12px rgba(227,161,90,0.42);
-      animation: dustFloat 9s ease-in-out infinite;
-      animation-delay: var(--d);
-    }
-    section, nav, #musicBtn, #nameBadge, #splash { position: relative; z-index: 2; }
-
-    .album-item {
-      opacity: 0;
-      transform: translateY(24px) scale(0.985);
-      transition:
-        opacity 0.7s cubic-bezier(0.2,0.8,0.2,1),
-        transform 0.7s cubic-bezier(0.2,0.8,0.2,1),
-        box-shadow 0.35s ease,
-        border-color 0.35s ease;
-    }
-    .album-item.photo-visible {
-      opacity: 1 !important;
-      transform: translateY(0) scale(1);
-    }
-    .album-item:hover {
-      border-color: rgba(133,175,203,0.48);
-      box-shadow:
-        0 0 0 1px rgba(255,253,248,0.7),
-        0 0 0 6px rgba(133,175,203,0.10),
-        0 24px 70px rgba(23,35,31,0.18),
-        0 0 36px rgba(227,161,90,0.16);
-    }
-    .album-item:hover img {
-      transform: scale(1.075);
-    }
-    .album-item::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      pointer-events: none;
-      box-shadow: inset 0 0 0 1px rgba(255,253,248,0.36);
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      z-index: 2;
-    }
-    .album-item:hover::before {
-      opacity: 1;
-    }
-    .album-upload.processing {
-      border-color: rgba(227,161,90,0.46);
-      box-shadow: 0 22px 70px rgba(227,161,90,0.14);
-    }
-    .album-upload.processing .album-upload-icon {
-      animation: softBreath 1.8s ease-in-out infinite;
-    }
-    .upload-progress {
-      position: relative;
-      overflow: hidden;
-    }
-    .upload-progress::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      width: 42%;
-      background: linear-gradient(90deg, transparent, rgba(255,253,248,0.82), transparent);
-      transform: translateX(-120%);
-      opacity: 0;
-    }
-    .album-upload.processing .upload-progress::after {
-      opacity: 1;
-      animation: processingSweep 1.25s ease-in-out infinite;
-    }
-
-    @media (max-width: 768px) {
-      .ambient-glow-a { width: 70vw; height: 70vw; }
-      .ambient-glow-b { width: 62vw; height: 62vw; }
-      .film-dust span { opacity: 0.45; }
-    }
 </style>
 </head>
 <body>
@@ -1603,20 +1471,6 @@
   <div class="parallax-layer parallax-3"></div>
   <div class="parallax-layer parallax-4"></div>
   <div class="paper-texture"></div>
-  <div class="ambient-glow ambient-glow-a"></div>
-  <div class="ambient-glow ambient-glow-b"></div>
-  <div class="film-dust" aria-hidden="true">
-    <span style="--x:8%;--y:18%;--d:0s;--s:1"></span>
-    <span style="--x:18%;--y:72%;--d:1.7s;--s:.72"></span>
-    <span style="--x:31%;--y:36%;--d:3.2s;--s:.9"></span>
-    <span style="--x:42%;--y:82%;--d:.8s;--s:.62"></span>
-    <span style="--x:57%;--y:22%;--d:2.6s;--s:.78"></span>
-    <span style="--x:69%;--y:64%;--d:4.1s;--s:1.1"></span>
-    <span style="--x:81%;--y:30%;--d:1.2s;--s:.68"></span>
-    <span style="--x:91%;--y:78%;--d:3.6s;--s:.84"></span>
-    <span style="--x:24%;--y:12%;--d:5.2s;--s:.56"></span>
-    <span style="--x:76%;--y:10%;--d:6s;--s:.74"></span>
-  </div>
 
   <!-- Splash -->
   <div id="splash">
@@ -1789,7 +1643,6 @@
 
     let currentFilter = 'all';
     let currentAlbum = 'daily';
-    let photoRevealObserver = null;
 
     // 示例照片
     const samplePhotos = [
@@ -2201,8 +2054,6 @@
 
         grid.appendChild(item);
       });
-      observePhotoReveal();
-
       // Add load more button if there are more photos
       if (displayPhotos.filter(p => currentFilter === 'all' || p.cat === currentFilter).length > VISIBLE_COUNT) {
         var more = document.createElement('div');
@@ -2210,27 +2061,6 @@
         more.innerHTML = '<button onclick="loadMorePhotos()" style="padding:12px 32px;border-radius:100px;border:1px solid var(--glass-border);background:var(--glass-bg);color:var(--deep);cursor:pointer;font-family:Inter,sans-serif;font-size:13px;letter-spacing:1px;transition:all 0.3s;">加载更多 (' + (displayPhotos.filter(p => currentFilter === 'all' || p.cat === currentFilter).length - VISIBLE_COUNT) + ' 张剩余)</button>';
         grid.appendChild(more);
       }
-    }
-
-    function observePhotoReveal() {
-      const items = document.querySelectorAll('.album-item');
-      if (!items.length) return;
-      if (!('IntersectionObserver' in window)) {
-        items.forEach(function(item) { item.classList.add('photo-visible'); });
-        return;
-      }
-      if (photoRevealObserver) photoRevealObserver.disconnect();
-      photoRevealObserver = new IntersectionObserver(function(entries) {
-        entries.forEach(function(entry) {
-          if (!entry.isIntersecting) return;
-          entry.target.classList.add('photo-visible');
-          photoRevealObserver.unobserve(entry.target);
-        });
-      }, { threshold: 0.14, rootMargin: '0px 0px -4% 0px' });
-      items.forEach(function(item, index) {
-        item.style.transitionDelay = Math.min(index * 35, 280) + 'ms';
-        photoRevealObserver.observe(item);
-      });
     }
 
     async function deletePhoto(id) {
@@ -2317,9 +2147,7 @@
       var status = document.getElementById('uploadStatus');
       var prog = document.getElementById('uploadProgress');
       var progBar = document.getElementById('uploadProgressBar');
-      var uploadZone = document.getElementById('uploadZone');
       status.style.display = 'block';
-      if (uploadZone) uploadZone.classList.add('processing');
       if (prog) { prog.style.display = 'block'; progBar.style.width = '0'; }
 
       var uploadedPhotos = [];
@@ -2390,7 +2218,6 @@
       var success = total - failed;
       status.textContent = failed > 0 ? 'Done: ' + success + ' uploaded, ' + failed + ' failed' : 'Done: ' + success + ' photos uploaded!';
       console.log('[upload] Complete: ' + success + ' success, ' + failed + ' failed');
-      if (uploadZone) uploadZone.classList.remove('processing');
       setTimeout(function() { status.style.display = 'none'; if (prog) prog.style.display = 'none'; }, 5000);
     }
     // ==================== END UPLOAD ====================
