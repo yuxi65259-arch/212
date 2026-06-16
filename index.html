@@ -1673,13 +1673,23 @@
 
     // ==================== COUNTERS ====================
     let countersStarted = false;
+    const GRADUATION_START_DATE = '2026-06-16';
+    let currentGraduationDay = null;
+    function getInclusiveDaysSince(dateText) {
+      const [year, month, day] = dateText.split('-').map(Number);
+      const start = new Date(year, month - 1, day);
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const diff = Math.floor((todayStart - start) / (1000 * 60 * 60 * 24));
+      return Math.max(1, diff + 1);
+    }
     function startCounters() {
       if (countersStarted) return;
       countersStarted = true;
       const els = document.querySelectorAll('.stat-number[data-count]');
-      const gradDate = new Date('2024-06-20');
-      const gradDays = Math.floor((new Date() - gradDate) / (1000 * 60 * 60 * 24));
-      document.querySelector('.hero-stats .stat-card:last-child .stat-number').dataset.count = Math.max(0, gradDays);
+      const gradDays = getInclusiveDaysSince(GRADUATION_START_DATE);
+      currentGraduationDay = gradDays;
+      document.querySelector('.hero-stats .stat-card:last-child .stat-number').dataset.count = gradDays;
       els.forEach(el => {
         const target = parseInt(el.dataset.count);
         let current = 0;
@@ -1691,6 +1701,16 @@
         }, 25);
       });
     }
+    function refreshGraduationDayIfNeeded() {
+      const nextDay = getInclusiveDaysSince(GRADUATION_START_DATE);
+      if (nextDay === currentGraduationDay) return;
+      currentGraduationDay = nextDay;
+      const el = document.querySelector('.hero-stats .stat-card:last-child .stat-number');
+      if (!el) return;
+      el.dataset.count = nextDay;
+      el.textContent = nextDay.toLocaleString();
+    }
+    setInterval(refreshGraduationDayIfNeeded, 60 * 1000);
 
     // ==================== PHOTO MANAGEMENT ====================
     // Photos stored in GitHub repo (unlimited, all devices sync)
