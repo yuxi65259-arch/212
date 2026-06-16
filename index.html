@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>212 宿舍 · 毕业纪念册</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet" />
+  <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; }
@@ -332,7 +334,7 @@
     .upload-progress { width:100%; height: 4px; background: rgba(197,169,110,0.1); border-radius: 2px; margin-top: 12px; overflow: hidden; }
     .upload-progress-bar { height: 100%; background: linear-gradient(90deg, var(--golden), var(--milky-tea)); border-radius: 2px; width: 0; transition: width 0.3s ease; }
     .back-btn:hover { transform: translateX(-4px); }
-    .album-detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .face-tag { display: inline-block; padding: 3px 10px; border-radius: 10px; background: rgba(201,169,110,0.15); font-size: 11px; color: var(--warm-brown); cursor: pointer; margin: 2px 4px; } .face-tag:hover { background: rgba(201,169,110,0.3); } .face-tag.active { background: var(--golden); color: #fff; } .person-bar { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 16px; align-items: center; } .album-detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
     .album-detail-icon { font-size: 36px; line-height: 1; }
     #lightbox { transition: opacity 0.3s ease; opacity: 0; }
     #lightbox.open { opacity: 1; }
@@ -832,6 +834,7 @@
       }
 
       var shown = 0;
+      if (faceFilter) { displayPhotos = displayPhotos.filter(function(p) { return p.faceTags && p.faceTags.indexOf(faceFilter) >= 0; }); }
       displayPhotos.forEach(photo => {
         if (currentFilter !== 'all' && photo.cat !== currentFilter) return;
         if (shown >= VISIBLE_COUNT) return;
@@ -863,6 +866,7 @@
           };
           item.appendChild(imgEl);
           item.classList.add('landscape');
+          if (!photo.isSample && !photo.hasOwnProperty('hasFace')) { queueFace(photo); }
         } else {
           const div = document.createElement('div');
           div.className = 'placeholder-img';
@@ -873,7 +877,7 @@
 
         const overlay = document.createElement('div');
         overlay.className = 'album-overlay';
-        overlay.textContent = (photo.label || '无标题') + (photo.uploader ? ' - ' + photo.uploader : '');
+        overlay.textContent = (photo.label || '') + (photo.uploader ? ' - ' + photo.uploader : ''); if (photo.faceTags && photo.faceTags.length) { overlay.textContent += ' [Faces: ' + photo.faceTags.join(', ') + ']'; }
         item.appendChild(overlay);
 
         if (!photo.isSample) {
@@ -1077,6 +1081,7 @@
       currentAlbum = id;
       currentFilter = id;
       VISIBLE_COUNT = 50;
+      faceFilter = '';
       document.getElementById('albumListView').style.display = 'none';
       document.getElementById('albumDetailView').style.display = 'block';
       document.getElementById('albumDetailIcon').textContent = icon || '';
@@ -1245,6 +1250,126 @@
     function showNamePrompt() { var p = document.getElementById('namePrompt'); if (p) p.style.display = 'flex'; }
     function setName() { var inp = document.getElementById('nameInput'); var n = inp.value.trim(); if (!n) { inp.style.borderColor = '#e74c3c'; return; } myName = n; localStorage.setItem('dorm212_name', n); document.getElementById('namePrompt').style.display = 'none'; }
     document.addEventListener('keydown', function(e) { if (e.key === 'Enter' && document.getElementById('namePrompt')?.style.display === 'flex') setName(); });
+    // ==================== FACE DETECTION ====================
+    var faceReady = false;
+    var faceData = JSON.parse(localStorage.getItem('dorm212_faces') || '{}');
+    var faceFilter = '';
+    var faceQueue = [];
+    var faceRunning = false;
+
+    async function loadFaceModels() {
+      if (faceReady) return true;
+      if (typeof faceapi === 'undefined') return false;
+      try {
+        var MU = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+        await faceapi.nets.tinyFaceDetector.loadFromUri(MU);
+        await faceapi.nets.faceLandmark68Net.loadFromUri(MU);
+        await faceapi.nets.faceRecognitionNet.loadFromUri(MU);
+        faceReady = true; return true;
+      } catch(e) { return false; }
+    }
+
+    async function detectFacesForPhoto(photo, img) {
+      if (!faceReady) return;
+      try {
+        var det = await faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 256, scoreThreshold: 0.5 })).withFaceLandmarks().withFaceDescriptors();
+        if (!det.length) return;
+        photo.hasFace = true;
+        photo.faceDescriptors = det.map(function(d) { return Array.from(d.descriptor); });
+        photo.faceTags = [];
+        for (var i = 0; i < det.length; i++) {
+          var found = matchFace(det[i].descriptor);
+          if (found) photo.faceTags.push(found);
+        }
+      } catch(e) {}
+    }
+
+    function matchFace(desc) {
+      var best = '', bestDist = 0.6;
+      for (var k in faceData) {
+        var d = faceapi.euclideanDistance(desc, new Float32Array(faceData[k]));
+        if (d < bestDist) { bestDist = d; best = k; }
+      }
+      return best;
+    }
+
+    function saveFaceData(id, name) {
+      var photo = allPhotos.find(function(p) { return p.id === id; });
+      if (!photo || !photo.faceDescriptors) return;
+      faceData[name] = photo.faceDescriptors[0];
+      localStorage.setItem('dorm212_faces', JSON.stringify(faceData));
+      // re-match all photos
+      allPhotos.forEach(function(p) {
+        if (p.faceDescriptors) {
+          p.faceTags = [];
+          for (var i = 0; i < p.faceDescriptors.length; i++) {
+            var m = matchFace(new Float32Array(p.faceDescriptors[i]));
+            if (m && p.faceTags.indexOf(m) < 0) p.faceTags.push(m);
+          }
+        }
+      });
+      renderPersonBar();
+      renderAlbum();
+      console.log('[face] Saved:', name);
+    }
+
+    function processFaceQueue() {
+      if (faceRunning || !faceQueue.length) return;
+      faceRunning = true;
+      (async function() {
+        if (!await loadFaceModels()) { faceRunning = false; return; }
+        while (faceQueue.length > 0) {
+          var item = faceQueue.shift();
+          var img = document.getElementById('face-img-' + item.id);
+          if (!img) { img = new Image(); img.src = item.url; await new Promise(function(r) { img.onload = r; }); }
+          await detectFacesForPhoto(item.photo, img);
+          await new Promise(function(r) { setTimeout(r, 50); });
+        }
+        // re-assign tags
+        allPhotos.forEach(function(p) {
+          if (p.faceDescriptors) {
+            p.faceTags = [];
+            for (var i = 0; i < p.faceDescriptors.length; i++) {
+              var m = matchFace(new Float32Array(p.faceDescriptors[i]));
+              if (m && p.faceTags.indexOf(m) < 0) p.faceTags.push(m);
+            }
+          }
+        });
+        renderPersonBar();
+        renderAlbum();
+        faceRunning = false;
+      })();
+    }
+
+    function queueFace(photo) {
+      if (!photo.url || photo.isSample) return;
+      faceQueue.push({ photo: photo, id: photo.id, url: photo.url });
+      processFaceQueue();
+    }
+
+    var personBar;
+    function filterAll() { filterAll(); }
+    function renderPersonBar() {
+      if (!personBar) {
+        personBar = document.createElement('div');
+        personBar.className = 'person-bar';
+        var dv = document.getElementById('albumDetailView');
+        if (dv) { var title = document.getElementById('albumDetailTitle'); if (title && title.parentNode) title.parentNode.insertBefore(personBar, title.nextSibling); }
+      }
+      if (!personBar) return;
+      var names = Object.keys(faceData);
+      var count = allPhotos.filter(function(p) { return p.hasFace; }).length;
+      var h = '<b style="font-size:12px;color:var(--warm-brown);margin-right:6px;">People</b>';
+      h += '<button class="face-tag' + (faceFilter === '' ? ' active' : '') + '" onclick="filterPersonClick(event)" data-person="">All</button>';
+      names.forEach(function(n) { h += '<button class="face-tag' + (faceFilter === n ? ' active' : '') + '" data-person="' + n + '" onclick="filterPersonClick(event)">' + n + '</button>'; });
+      if (count) h += '<span style="font-size:11px;color:var(--milky-tea);margin-left:6px;">' + count + ' photos</span>';
+      personBar.innerHTML = h;
+    }
+
+    function filterPersonClick(e) { var p = e.target.getAttribute('data-person'); filterPerson(p); }
+    function filterPerson(n) { faceFilter = n; VISIBLE_COUNT = 50; renderAlbum(); renderPersonBar(); }
+    function namePerson(id) { var n = prompt('Name:', ''); if (n && n.trim()) saveFaceData(id, n.trim()); }
+
     // ==================== INIT ====================
     let allPhotos = [];
     let allMessages = [];
