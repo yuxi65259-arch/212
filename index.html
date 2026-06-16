@@ -1098,12 +1098,12 @@
           } catch(e) {
             retries++;
             if (retries >= 3) { failed++; console.warn('[upload] Failed: ' + file.name + ' - ' + e.message); }
-            else { status.textContent = 'Retrying ' + file.name + ' (' + retries + '/2)...'; await new Promise(function(r) { setTimeout(r, 500); }); }
+            else { status.textContent = 'Retrying ' + file.name + ' (' + retries + '/2)...'; await new Promise(function(r) { setTimeout(r, 2000); }); }
           }
         }
 
-        // Yield to UI every 3 files
-        if (i % 3 === 0) await new Promise(function(r) { setTimeout(r, 0); });
+        // Delay between uploads to avoid rate limiting (1s per file)
+        await new Promise(function(r) { setTimeout(r, 1000); });
       }
 
       if (batch.length > 0) {
