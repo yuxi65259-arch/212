@@ -327,6 +327,10 @@
     .album-item img { transition: transform 0.6s cubic-bezier(0.25,0.46,0.45,0.94); }
     .album-item:hover img { transform: scale(1.08); }
     .album-upload:hover .album-upload-icon { animation: float 1.5s ease-in-out infinite; }
+    .upload-folder-btn { display: inline-block; margin-top: 10px; padding: 8px 20px; border-radius: 100px; border: 1px solid var(--glass-border); background: transparent; font-family: 'Inter', sans-serif; font-size: 12px; color: var(--warm-brown); cursor: pointer; transition: all 0.3s; letter-spacing: 1px; }
+    .upload-folder-btn:hover { background: rgba(197,169,110,0.1); border-color: var(--golden); color: var(--deep); }
+    .upload-progress { width:100%; height: 4px; background: rgba(197,169,110,0.1); border-radius: 2px; margin-top: 12px; overflow: hidden; }
+    .upload-progress-bar { height: 100%; background: linear-gradient(90deg, var(--golden), var(--milky-tea)); border-radius: 2px; width: 0; transition: width 0.3s ease; }
     .back-btn:hover { transform: translateX(-4px); }
     .album-detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
     .album-detail-icon { font-size: 36px; line-height: 1; }
@@ -491,8 +495,11 @@
       <div class="album-detail-header"><span class="album-detail-icon" id="albumDetailIcon"></span><h3 class="album-detail-title" id="albumDetailTitle"></h3></div>
       <div class="album-upload" id="uploadZone" onclick="document.getElementById('fileInput').click()">
         <input type="file" id="fileInput" accept="image/*" multiple onchange="handleUpload(event)" />
+        <input type="file" id="folderInput" webkitdirectory multiple onchange="handleUpload(event)" />
         <div class="album-upload-icon">📸</div>
-        <div class="album-upload-text">↑ 点击上传</div>
+        <div class="album-upload-text">↑ 点击上传图片 · 支持批量多选 · 最多2000张</div>
+        <div class="upload-folder-btn" onclick="event.stopPropagation();document.getElementById('folderInput').click()">📁 上传文件夹</div>
+        <div class="upload-progress" id="uploadProgress" style="display:none;"><div class="upload-progress-bar" id="uploadProgressBar"></div></div>
         <div class="upload-status" id="uploadStatus"></div>
       </div>
       <div class="album-grid" id="albumGrid"></div>
@@ -910,8 +917,9 @@
 
     // ==================== UPLOAD ====================
     async function handleUpload(event) {
-      const files = Array.from(event.target.files).filter(f => f.type.startsWith('image/'));
-      if (!files.length) return;
+      var allFiles = Array.from(event.target.files);
+      var files = allFiles.filter(function(f) { return f.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp|heic|heif)$/i.test(f.name); });
+      if (!files.length) { event.target.value = ''; return; }
       event.target.value = '';
       showCategoryPicker(files);
     }
@@ -923,7 +931,7 @@
       e.preventDefault();
       uploadZone.style.borderColor = '';
       uploadZone.style.background = '';
-      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(f.name));
       if (files.length) showCategoryPicker(files);
     });
 
@@ -936,28 +944,34 @@
     async function startUpload(category) {
       const status = document.getElementById('uploadStatus');
       status.style.display = 'block';
+      var prog = document.getElementById('uploadProgress');
+      var progBar = document.getElementById('uploadProgressBar');
+      if (prog) { prog.style.display = 'block'; progBar.style.width = '0'; }
 
       // Load existing shared photos
       const batch = [];
+      let failed = 0;
+      const total = pendingFiles.length;
 
       for (let i = 0; i < pendingFiles.length; i++) {
         const file = pendingFiles[i];
-        status.textContent = `⏳ 压缩上传中 (${i+1}/${pendingFiles.length}): ${file.name}`;
+        status.textContent = `⏳ 上传中 ${i+1}/${total} (${Math.round(((i+1)/total)*100)}%) - ${file.name}`;
         try {
+          progBar.style.width = Math.round(((i + 1) / total) * 100) + '%';
           const dataUrl = await compressImage(file);
           const result = await uploadToServer(dataUrl, category, file.name);
           batch.push(result);
+          if (i % 5 === 0) await new Promise(function(r) { setTimeout(r, 0); });
         } catch(e) {
-          status.textContent = `❌ ${file.name} 上传失败: ${e.message}`;
-          return;
+          status.textContent = `⏳ 跳过 ${file.name}...`; failed++;
         }
       }
 
       allPhotos = [...allPhotos, ...batch];
       renderAlbum();
       renderAlbumCovers();
-      status.textContent = `✅ ${batch.length} 张照片上传成功！`;
-      setTimeout(() => { status.style.display = 'none'; }, 3000);
+      status.textContent = failed > 0 ? `✅ ${total - failed} 张成功，${failed} 张失败` : `✅ ${total - failed} 张照片上传成功！`;
+      setTimeout(() => { status.style.display = 'none'; if (prog) prog.style.display = 'none'; }, 5000);
     }
 
     // ==================== ALBUM NAVIGATION ====================
