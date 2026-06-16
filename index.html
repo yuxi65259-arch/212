@@ -1321,7 +1321,12 @@
       if (faceRunning || !faceQueue.length) return;
       faceRunning = true;
       (async function() {
-        if (!await loadFaceModels()) { faceRunning = false; return; }
+        if (!await loadFaceModels()) {
+          // faceapi not ready yet, retry in 2s
+          faceRunning = false;
+          setTimeout(function() { console.log('[face] Retrying model load...'); processFaceQueue(); }, 2000);
+          return;
+        }
         while (faceQueue.length > 0) {
           var item = faceQueue.shift();
           var img = document.getElementById('face-img-' + item.id);
@@ -1392,6 +1397,8 @@
       renderAlbum();
       renderAlbumCovers();
       setTimeout(function() { renderPersonBar(); }, 2000);
+      // Start face detection after models likely loaded
+      setTimeout(function() { if (allPhotos.length > 0 && !faceReady) { console.log('[face] Starting initial face scan...'); allPhotos.forEach(function(p) { if (!p.isSample && !p.hasOwnProperty('hasFace')) queueFace(p); }); } }, 3000);
     })();
 
     console.log('🎓 212 宿舍毕业纪念册 — 我们的小窝');
