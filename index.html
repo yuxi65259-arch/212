@@ -1260,14 +1260,17 @@
 
     async function loadFaceModels() {
       if (faceReady) return true;
-      if (typeof faceapi === 'undefined') return false;
+      if (typeof faceapi === 'undefined') { console.log('[face] faceapi not loaded'); return false; }
       try {
-        var MU = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+        var MU = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/';
+        console.log('[face] Loading models from', MU);
         await faceapi.nets.tinyFaceDetector.loadFromUri(MU);
         await faceapi.nets.faceLandmark68Net.loadFromUri(MU);
         await faceapi.nets.faceRecognitionNet.loadFromUri(MU);
-        faceReady = true; return true;
-      } catch(e) { return false; }
+        faceReady = true;
+        console.log('[face] Models loaded OK');
+        return true;
+      } catch(e) { console.warn('[face] Model load error:', e.message); return false; }
     }
 
     async function detectFacesForPhoto(photo, img) {
