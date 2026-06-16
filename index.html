@@ -333,7 +333,7 @@
     .upload-progress { width:100%; height: 4px; background: rgba(197,169,110,0.1); border-radius: 2px; margin-top: 12px; overflow: hidden; }
     .upload-progress-bar { height: 100%; background: linear-gradient(90deg, var(--golden), var(--milky-tea)); border-radius: 2px; width: 0; transition: width 0.3s ease; }
     .back-btn:hover { transform: translateX(-4px); }
-    .face-tag { display: inline-block; padding: 3px 10px; border-radius: 10px; background: rgba(201,169,110,0.15); font-size: 11px; color: var(--warm-brown); cursor: pointer; margin: 2px 4px; } .face-tag:hover { background: rgba(201,169,110,0.3); } .face-tag.active { background: var(--golden); color: #fff; } .person-bar { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 16px; align-items: center; } .album-detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .face-avatar { display: inline-flex; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; border: 2px solid transparent; background: rgba(201,169,110,0.1); font-size: 14px; color: var(--deep); } .face-avatar img { width: 100%; height: 100%; object-fit: cover; } .face-avatar.active { border-color: var(--golden); box-shadow: 0 0 10px rgba(201,169,110,0.4); transform: scale(1.12); } .face-avatar:hover { transform: scale(1.08); box-shadow: 0 0 8px rgba(201,169,110,0.2); } .face-tag { display: inline-block; padding: 3px 10px; border-radius: 10px; background: rgba(201,169,110,0.15); font-size: 11px; color: var(--warm-brown); cursor: pointer; margin: 2px 4px; } .face-tag:hover { background: rgba(201,169,110,0.3); } .face-tag.active { background: var(--golden); color: #fff; } .person-bar { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 16px; align-items: center; } .album-detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
     .album-detail-icon { font-size: 36px; line-height: 1; }
     #lightbox { transition: opacity 0.3s ease; opacity: 0; }
     #lightbox.open { opacity: 1; }
@@ -1086,6 +1086,7 @@
       currentFilter = id;
       VISIBLE_COUNT = 50;
       faceFilter = '';
+      allFaceThumbs = [];
       renderPersonBar();
       document.getElementById('albumListView').style.display = 'none';
       document.getElementById('albumDetailView').style.display = 'block';
@@ -1258,6 +1259,7 @@
     // ==================== FACE DETECTION ====================
     var faceReady = false;
     var faceData = JSON.parse(localStorage.getItem('dorm212_faces') || '{}');
+    var allFaceThumbs = [];
     var faceFilter = '';
     var faceQueue = [];
     var faceRunning = false;
@@ -1292,10 +1294,19 @@
         photo.hasFace = true;
         photo.faceDescriptors = det.map(function(d) { return Array.from(d.descriptor); });
         photo.faceTags = [];
+        photo.faceThumbs = [];
         for (var i = 0; i < det.length; i++) {
           var found = matchFace(det[i].descriptor);
+          var tag = found || 'Unknown';
           if (found) { photo.faceTags.push(found); } else { photo.faceTags.push('Unknown'); }
+          var box = det[i].detection.box;
+          var tc = document.createElement('canvas'); tc.width = 80; tc.height = 80;
+          var tctx = tc.getContext('2d'); tctx.beginPath(); tctx.arc(40, 40, 38, 0, Math.PI * 2); tctx.clip();
+          var sc = Math.max(80 / box.width, 80 / box.height) * 1.3;
+          tctx.drawImage(img || cleanCanvas, box.x - box.width * 0.15, box.y - box.height * 0.15, box.width * 1.3, box.height * 1.3, -5, -5, 90, 90);
+          photo.faceThumbs.push({ tag: tag, thumb: tc.toDataURL(), photoId: photo.id });
         }
+        photo.faceThumbs.forEach(function(ft) { if (!allFaceThumbs.find(function(t) { return t.tag === ft.tag; })) allFaceThumbs.push(ft); });
         console.log('[face] Photo ' + (photo.label || photo.id) + ': found ' + det.length + ' face(s), tags:', photo.faceTags);
       } catch(e) {}
     }
@@ -1371,23 +1382,22 @@
     var personBar;
     function filterAll() { filterAll(); }
     function renderPersonBar() {
-      if (!personBar) {
-        personBar = document.createElement('div');
-        personBar.className = 'person-bar';
-        var dv = document.getElementById('albumDetailView');
-        if (dv) { var title = document.getElementById('albumDetailTitle'); if (title && title.parentNode) title.parentNode.appendChild(personBar); }
-      }
+      if (!personBar) { personBar = document.createElement('div'); personBar.className = 'person-bar'; var dv = document.getElementById('albumDetailView'); if (dv) { var title = document.getElementById('albumDetailTitle'); if (title && title.parentNode) title.parentNode.appendChild(personBar); } }
       if (!personBar) return;
-      var names = Object.keys(faceData);
-      var count = allPhotos.filter(function(p) { return p.hasFace; }).length;
-      var h = '<b style="font-size:12px;color:var(--warm-brown);margin-right:6px;">People</b>';
-      h += '<button class="face-tag' + (faceFilter === '' ? ' active' : '') + '" onclick="filterPersonClick(event)" data-person="">All</button>';
-      names.forEach(function(n) { h += '<button class="face-tag' + (faceFilter === n ? ' active' : '') + '" data-person="' + n + '" onclick="filterPersonClick(event)">' + n + '</button>'; });
-      if (count) h += '<span style="font-size:11px;color:var(--milky-tea);margin-left:6px;">' + count + ' photos</span>';
-        var unknown = allPhotos.filter(function(p) { return p.faceTags && p.faceTags.indexOf('Unknown') >= 0; }).length;
-    if (unknown > 0) h += '<span style="font-size:11px;color:var(--golden);margin-left:8px;cursor:pointer;" onclick="nameNextUnknown()">Name ' + unknown + ' unknown</span>';
-    personBar.innerHTML = h;
+      var seen = {}; var ut = allFaceThumbs.filter(function(t, i, arr) { if (seen[t.tag]) return false; seen[t.tag] = true; return true; });
+      ut.sort(function(a, b) { if (a.tag === 'Unknown') return 1; if (b.tag === 'Unknown') return -1; return a.tag.localeCompare(b.tag); });
+      var h = '<div class="face-avatar' + (faceFilter === '' ? ' active' : '') + '" onclick="filterPersonClick(event)" data-person="" style="background:var(--deep);color:#fff;font-size:11px;font-weight:bold;">All</div>';
+      ut.forEach(function(t) {
+        if (t.tag === 'Unknown') { h += '<div class="face-avatar" onclick="nameUnknownPrompt()" title="Click to name">?</div>'; }
+        else { h += '<div class="face-avatar' + (faceFilter === t.tag ? ' active' : '') + '" onclick="filterPersonClick(event)" data-person="' + t.tag + '"><img src="' + t.thumb + '" onerror="this.style.display=\'none\';this.parentElement.textContent=\'' + t.tag.charAt(0) + '\'" /></div>'; }
+      });
+      var unknown = allPhotos.filter(function(p) { return p.faceTags && p.faceTags.indexOf('Unknown') >= 0; }).length;
+      if (unknown > 0) h += '<span style="font-size:11px;color:var(--golden);margin-left:4px;cursor:pointer;" onclick="nameNextUnknown()">Name ' + unknown + ' faces</span>';
+      personBar.innerHTML = h;
     }
+
+    function nameUnknownPrompt() { nameNextUnknown(); }
+
 
     function filterPersonClick(e) { var p = e.target.getAttribute('data-person'); filterPerson(p); }
     function filterPerson(n) { faceFilter = n; VISIBLE_COUNT = 50; renderAlbum(); renderPersonBar(); }
