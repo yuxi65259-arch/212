@@ -459,6 +459,1006 @@
     .album-cover-name { font-family: 'Noto Serif SC', serif; font-size: 16px; color: var(--deep); margin-top: 12px; }
     .album-cover-count { font-family: 'Inter', sans-serif; font-size: 12px; color: var(--warm-brown); margin-top: 4px; letter-spacing: 1px; }
     .album-cover-desc { font-family: 'Inter', sans-serif; font-size: 11px; color: var(--milky-tea); letter-spacing: 2px; margin-top: 2px; text-transform: uppercase; }
+
+    /* ==================== Youth archive redesign ==================== */
+    :root {
+      --cream: #F8F4EC;
+      --paper: #FFFDF8;
+      --milky-tea: #E3A15A;
+      --golden: #E3A15A;
+      --warm-brown: #6D766E;
+      --dark-brown: #17231F;
+      --deep: #17231F;
+      --campus-green: #6F8A78;
+      --sky-blue: #85AFCB;
+      --sunset: #E3A15A;
+      --rose: #D9A6A0;
+      --ink-muted: #59645E;
+      --glass-bg: rgba(255, 253, 248, 0.78);
+      --glass-border: rgba(23, 35, 31, 0.10);
+      --shadow-sm: 0 12px 34px rgba(23, 35, 31, 0.07);
+      --shadow-md: 0 22px 60px rgba(23, 35, 31, 0.12);
+      --shadow-lg: 0 34px 90px rgba(23, 35, 31, 0.18);
+      --radius-sm: 12px;
+      --radius-md: 18px;
+      --radius-lg: 26px;
+      --transition: 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    body {
+      font-family: 'Inter', 'Noto Serif SC', serif;
+      background:
+        linear-gradient(180deg, rgba(248,244,236,0.96), rgba(235,241,235,0.86) 48%, rgba(248,244,236,0.96)),
+        linear-gradient(90deg, rgba(133,175,203,0.16), rgba(217,166,160,0.12), rgba(227,161,90,0.12));
+      color: var(--deep);
+      letter-spacing: 0;
+    }
+
+    .parallax-layer, .sparkle, .cursor-glow { display: none !important; }
+    .grain-overlay { opacity: 0.035; mix-blend-mode: multiply; }
+    .paper-texture {
+      opacity: 0.34;
+      background-image:
+        linear-gradient(rgba(23,35,31,0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(23,35,31,0.025) 1px, transparent 1px);
+      background-size: 46px 46px;
+    }
+
+    #splash {
+      background:
+        radial-gradient(circle at 18% 18%, rgba(133,175,203,0.20), transparent 34%),
+        radial-gradient(circle at 80% 72%, rgba(227,161,90,0.18), transparent 36%),
+        linear-gradient(135deg, #17231F 0%, #21362F 54%, #111A17 100%);
+      overflow: hidden;
+    }
+    #splash::before,
+    #splash::after {
+      content: "";
+      position: absolute;
+      left: 7vw;
+      right: 7vw;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.34), transparent);
+    }
+    #splash::before { top: 11vh; }
+    #splash::after { bottom: 11vh; }
+    .splash-bg {
+      opacity: 0.65;
+      background:
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.10) 0 1px, transparent 1px 86px),
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 86px);
+    }
+    .splash-content {
+      width: min(860px, 88vw);
+      color: #FFFDF8;
+      text-shadow: 0 18px 50px rgba(0,0,0,0.28);
+      transform: translateY(-5vh);
+    }
+    .splash-room {
+      width: fit-content;
+      margin: 0 auto 24px;
+      padding: 8px 14px;
+      border: 1px solid rgba(255,255,255,0.26);
+      border-radius: 999px;
+      color: rgba(255,253,248,0.78);
+      font-weight: 500;
+      letter-spacing: 3px;
+    }
+    .splash-title {
+      color: rgba(255,253,248,0.96);
+      font-size: clamp(52px, 10vw, 116px);
+      font-weight: 700;
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+    .splash-sub {
+      color: rgba(255,253,248,0.76);
+      font-weight: 400;
+      letter-spacing: 2px;
+      margin-top: 24px;
+    }
+    .splash-btn {
+      background: #FFFDF8;
+      color: var(--deep);
+      border: 1px solid rgba(255,255,255,0.5);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.20);
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+    .splash-btn:hover {
+      background: #fff;
+      transform: translateY(-3px);
+    }
+    .splash-btn::after, .back-btn::after, .msg-form button::after { display: none; }
+
+    nav {
+      top: 22px;
+      padding: 7px;
+      gap: 3px;
+      background: rgba(255,253,248,0.84);
+      border: 1px solid rgba(23,35,31,0.10);
+      box-shadow: 0 16px 48px rgba(23,35,31,0.12);
+      animation: none;
+    }
+    nav a {
+      padding: 10px 18px;
+      color: rgba(23,35,31,0.58);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    nav a:hover,
+    nav a.active {
+      background: var(--deep);
+      color: #FFFDF8;
+    }
+    nav a.active { animation: none; }
+
+    section {
+      max-width: 1180px;
+      padding: 132px clamp(20px, 5vw, 56px) 86px;
+    }
+    .section-label {
+      color: var(--campus-green);
+      font-weight: 800;
+      font-size: 11px;
+      letter-spacing: 2.5px;
+      margin-bottom: 14px;
+    }
+    .section-label::after {
+      height: 2px;
+      background: linear-gradient(90deg, var(--campus-green), var(--sky-blue), var(--sunset));
+    }
+    .section-title {
+      width: min(900px, 100%);
+      color: var(--deep);
+      font-size: clamp(42px, 6vw, 78px);
+      font-weight: 700;
+      line-height: 1.05;
+      letter-spacing: 0;
+      background: none;
+      -webkit-text-fill-color: currentColor;
+      animation: none;
+    }
+
+    #home { padding-top: 152px; }
+    .hero-stats {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 18px;
+      margin: 54px 0 30px;
+    }
+    .stat-card {
+      position: relative;
+      overflow: hidden;
+      padding: 34px 16px 30px;
+      background: rgba(255,253,248,0.82);
+      border: 1px solid rgba(23,35,31,0.10);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      backdrop-filter: blur(18px);
+    }
+    .stat-card::before { display: none; }
+    .stat-card::after {
+      content: "";
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 0;
+      height: 4px;
+      border-radius: 999px 999px 0 0;
+      background: linear-gradient(90deg, var(--campus-green), var(--sky-blue), var(--sunset), var(--rose));
+    }
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-md);
+    }
+    .stat-number {
+      color: var(--deep);
+      font-weight: 650;
+      font-size: clamp(34px, 4vw, 54px);
+      letter-spacing: 0;
+    }
+    .stat-label {
+      color: var(--ink-muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    .memory-card {
+      padding: 0;
+      overflow: hidden;
+      align-items: stretch;
+      background: rgba(255,253,248,0.86);
+      border: 1px solid rgba(23,35,31,0.10);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+    }
+    .memory-img {
+      width: 178px;
+      height: auto;
+      min-height: 150px;
+      border-radius: 0;
+      background:
+        linear-gradient(135deg, rgba(111,138,120,0.92), rgba(133,175,203,0.70)),
+        linear-gradient(135deg, var(--sky-blue), var(--sunset));
+      font-size: 36px !important;
+    }
+    .memory-card:hover .memory-img { transform: none; }
+    .memory-text {
+      padding: 34px;
+      color: var(--deep);
+      font-size: clamp(18px, 2vw, 24px);
+      line-height: 1.75;
+    }
+
+    .album-covers {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 42px;
+      padding: 0;
+      overflow: visible;
+    }
+    .album-cover {
+      flex: none;
+      overflow: hidden;
+      padding-bottom: 22px;
+      border-radius: var(--radius-lg);
+      background: rgba(255,253,248,0.88);
+      border: 1px solid rgba(23,35,31,0.10);
+      box-shadow: var(--shadow-sm);
+    }
+    .album-cover:hover {
+      animation: none;
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-md);
+    }
+    .album-cover-img {
+      height: 232px;
+      background: #111A17;
+    }
+    .album-cover-img img {
+      object-fit: cover;
+      background: #111A17;
+      filter: saturate(0.96) contrast(1.02);
+    }
+    .album-cover-overlay {
+      background:
+        linear-gradient(to top, rgba(17,26,23,0.58), rgba(17,26,23,0.04)),
+        linear-gradient(135deg, rgba(133,175,203,0.18), rgba(227,161,90,0.14));
+    }
+    .album-cover-icon {
+      width: 62px;
+      height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: rgba(255,253,248,0.92);
+      box-shadow: 0 16px 42px rgba(0,0,0,0.24);
+      font-size: 30px;
+      filter: none;
+    }
+    .album-cover-name {
+      color: var(--deep);
+      margin-top: 18px;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    .album-cover-desc {
+      color: var(--campus-green);
+      font-weight: 800;
+      letter-spacing: 1.3px;
+    }
+    .album-cover-count {
+      color: var(--ink-muted);
+      letter-spacing: 0;
+    }
+
+    .back-btn {
+      padding: 10px 18px;
+      border: 1px solid rgba(23,35,31,0.10);
+      border-radius: 999px;
+      background: rgba(255,253,248,0.88);
+      color: var(--deep);
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+    }
+    .album-detail-header {
+      margin: 28px 0 22px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid rgba(23,35,31,0.10);
+    }
+    .album-detail-icon {
+      width: 58px;
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: rgba(255,253,248,0.94);
+      box-shadow: var(--shadow-sm);
+      font-size: 28px;
+    }
+    .album-detail-title {
+      color: var(--deep);
+      font-family: 'Noto Serif SC', serif;
+      font-size: clamp(30px, 4vw, 46px);
+      letter-spacing: 0;
+    }
+    .album-upload {
+      padding: 34px;
+      background: rgba(255,253,248,0.72);
+      border: 1px dashed rgba(23,35,31,0.22);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+    }
+    .album-upload::before { display: none; }
+    .album-upload:hover {
+      border-color: var(--campus-green);
+      background: rgba(255,253,248,0.92);
+      box-shadow: var(--shadow-md);
+    }
+    .album-upload-icon {
+      width: 58px;
+      height: 58px;
+      margin: 0 auto 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 18px;
+      background: var(--deep);
+      color: #fff;
+      font-size: 25px;
+    }
+    .album-upload-text {
+      color: var(--deep);
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    .upload-folder-btn {
+      background: #FFFDF8;
+      border-color: rgba(23,35,31,0.12);
+      color: var(--deep);
+      font-weight: 800;
+      letter-spacing: 0;
+      box-shadow: var(--shadow-sm);
+    }
+    .upload-progress {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(23,35,31,0.08);
+    }
+    .upload-progress-bar {
+      background: linear-gradient(90deg, var(--campus-green), var(--sky-blue), var(--sunset));
+    }
+    .upload-status {
+      background: rgba(133,175,203,0.13);
+      color: var(--deep);
+      border: 1px solid rgba(133,175,203,0.20);
+    }
+
+    .album-grid {
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 18px;
+      margin-top: 26px;
+    }
+    .album-item {
+      min-height: 230px;
+      border-radius: 18px;
+      background: rgba(255,253,248,0.88);
+      border: 1px solid rgba(23,35,31,0.08);
+      box-shadow: var(--shadow-sm);
+    }
+    .album-item.landscape { min-height: 198px; }
+    .album-item.portrait { min-height: 320px; }
+    .album-item .placeholder-img { min-height: 230px; }
+    .album-item:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-lg);
+    }
+    .album-overlay {
+      padding: 42px 18px 16px;
+      background: linear-gradient(transparent, rgba(17,26,23,0.76));
+      font-weight: 700;
+    }
+
+    .roommate-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 44px;
+    }
+    .roommate-card,
+    .tl-content,
+    .msg-form,
+    .msg-card,
+    .joke-card,
+    .moment-post-box,
+    .moment-card {
+      background: rgba(255,253,248,0.80);
+      border: 1px solid rgba(23,35,31,0.10);
+      box-shadow: var(--shadow-sm);
+    }
+    .roommate-card {
+      position: relative;
+      overflow: hidden;
+      padding: 34px 22px;
+      border-radius: var(--radius-lg);
+    }
+    .roommate-card::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 5px;
+      background: linear-gradient(90deg, var(--campus-green), var(--sky-blue), var(--sunset), var(--rose));
+    }
+    .roommate-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-md);
+    }
+    .rm-avatar {
+      background: linear-gradient(135deg, var(--campus-green), var(--sky-blue)) !important;
+      box-shadow: 0 14px 32px rgba(23,35,31,0.14);
+    }
+    .rm-name {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    .rm-nickname {
+      color: var(--campus-green);
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    .rm-tag {
+      background: rgba(111,138,120,0.12);
+      color: var(--deep);
+    }
+
+    .timeline {
+      margin-top: 42px;
+      padding-left: 8px;
+    }
+    .timeline::before {
+      left: 26px;
+      background: linear-gradient(var(--campus-green), var(--sky-blue), var(--sunset), transparent);
+    }
+    .tl-item {
+      gap: 28px;
+      margin-bottom: 24px;
+    }
+    .tl-dot {
+      width: 16px;
+      height: 16px;
+      margin-top: 28px;
+      background: #FFFDF8;
+      border: 4px solid var(--campus-green);
+      box-shadow: 0 0 0 6px rgba(111,138,120,0.13);
+    }
+    .tl-content {
+      padding: 28px;
+      border-radius: var(--radius-lg);
+    }
+    .tl-content:hover {
+      transform: translateX(5px);
+      box-shadow: var(--shadow-md);
+    }
+    .tl-date {
+      color: var(--campus-green);
+      font-weight: 800;
+      letter-spacing: 0.7px;
+    }
+    .tl-title {
+      color: var(--deep);
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+    .tl-desc {
+      color: var(--ink-muted);
+      font-size: 14px;
+    }
+
+    .msg-form,
+    .moment-post-box {
+      padding: 28px;
+      border-radius: var(--radius-lg);
+    }
+    .msg-form textarea,
+    .moment-post-box textarea,
+    .moment-cmt-input input {
+      background: #FFFDF8;
+      border-color: rgba(23,35,31,0.12);
+      border-radius: 14px;
+      color: var(--deep);
+    }
+    .msg-form textarea:focus,
+    .moment-post-box textarea:focus,
+    .moment-cmt-input input:focus {
+      border-color: var(--sky-blue);
+      box-shadow: 0 0 0 4px rgba(133,175,203,0.14);
+    }
+    .msg-form button,
+    .moment-post-btn,
+    .moment-cmt-input button {
+      background: var(--deep);
+      border-radius: 999px;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+    .msg-form button:hover,
+    .moment-post-btn:hover,
+    .moment-cmt-input button:hover {
+      background: var(--campus-green);
+      transform: translateY(-2px);
+    }
+    .msg-card,
+    .moment-card,
+    .joke-card {
+      border-radius: var(--radius-lg);
+    }
+    .msg-header {
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid rgba(23,35,31,0.07);
+    }
+    .msg-author,
+    .moment-author {
+      color: var(--deep);
+      font-weight: 800;
+    }
+    .msg-time,
+    .moment-time {
+      color: var(--campus-green);
+      font-weight: 700;
+    }
+    .msg-content,
+    .moment-text,
+    .moment-comment {
+      color: var(--ink-muted);
+    }
+    .moment-add-btn {
+      background: #FFFDF8;
+      border-color: rgba(23,35,31,0.12);
+      color: var(--deep);
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+    .moment-avatar {
+      background: linear-gradient(135deg, var(--campus-green), var(--sky-blue));
+    }
+    .moment-images {
+      gap: 8px;
+    }
+    .moment-images img {
+      min-height: 130px;
+      border-radius: 12px;
+      box-shadow: inset 0 0 0 1px rgba(23,35,31,0.06);
+    }
+    .moment-actions {
+      border-top-color: rgba(23,35,31,0.08);
+    }
+    .moment-like-btn,
+    .moment-cmt-btn {
+      color: var(--campus-green);
+      font-weight: 800;
+    }
+
+    .joke-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+    .joke-card {
+      padding: 28px;
+    }
+    .joke-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+    }
+    .joke-term {
+      color: var(--deep);
+      font-size: 20px;
+      letter-spacing: 0;
+    }
+    .joke-explanation {
+      color: var(--ink-muted);
+      font-size: 14px;
+    }
+
+    #musicBtn,
+    #nameBadge {
+      background: rgba(255,253,248,0.88);
+      border-color: rgba(23,35,31,0.10);
+      color: var(--deep);
+      box-shadow: var(--shadow-md);
+    }
+    #musicBtn:hover {
+      transform: translateY(-2px) rotate(12deg);
+    }
+    #nameBadge {
+      font-weight: 800;
+    }
+    #lightbox {
+      background: rgba(12,18,16,0.92);
+    }
+    #lightbox img {
+      border-radius: 18px;
+      box-shadow: 0 30px 90px rgba(0,0,0,0.42);
+    }
+
+    @media (max-width: 980px) {
+      .album-covers,
+      .roommate-grid,
+      .joke-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .hero-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 768px) {
+      nav {
+        top: 12px;
+        width: calc(100% - 24px);
+        justify-content: flex-start;
+        overflow-x: auto;
+        border-radius: 18px;
+      }
+      nav::-webkit-scrollbar { display: none; }
+      nav a {
+        padding: 9px 13px;
+      }
+      section {
+        padding: 104px 18px 64px;
+      }
+      .section-title {
+        font-size: clamp(36px, 11vw, 54px);
+      }
+      .memory-card {
+        flex-direction: column;
+      }
+      .memory-img {
+        width: 100%;
+        min-height: 160px;
+      }
+      .album-cover-img {
+        height: 180px;
+      }
+    }
+    @media (max-width: 560px) {
+      .album-covers,
+      .roommate-grid,
+      .joke-grid {
+        grid-template-columns: 1fr;
+      }
+      .album-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .album-item {
+        min-height: 170px;
+        border-radius: 14px;
+      }
+      .hero-stats {
+        gap: 12px;
+      }
+      .stat-card {
+        padding: 26px 12px 24px;
+      }
+      .msg-form .btn-row,
+      .moment-post-row {
+        align-items: stretch;
+        flex-direction: column;
+      }
+      #musicBtn {
+        right: 18px;
+        bottom: 18px;
+      }
+      #nameBadge {
+        left: 18px;
+        bottom: 18px;
+        max-width: calc(100vw - 96px);
+      }
+    }
+
+    /* ==================== Premium motion + album redesign ==================== */
+    @keyframes archiveFadeUp {
+      from { opacity: 0; transform: translateY(26px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes slowSheen {
+      from { transform: translateX(-140%) skewX(-18deg); }
+      to { transform: translateX(180%) skewX(-18deg); }
+    }
+    @keyframes softBreath {
+      0%, 100% { box-shadow: var(--shadow-sm); }
+      50% { box-shadow: 0 22px 66px rgba(23,35,31,0.14); }
+    }
+    @keyframes filmScan {
+      0% { transform: translateY(-100%); opacity: 0; }
+      20%, 70% { opacity: 0.16; }
+      100% { transform: translateY(260%); opacity: 0; }
+    }
+
+    section.active .section-label,
+    section.active .section-title,
+    section.active .hero-stats,
+    section.active .memory-card,
+    section.active .album-covers,
+    section.active .roommate-grid,
+    section.active .timeline,
+    section.active .msg-form,
+    section.active .moment-post-box,
+    section.active .joke-grid {
+      animation: archiveFadeUp 0.72s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+    section.active .section-title { animation-delay: 0.06s; }
+    section.active .hero-stats,
+    section.active .album-covers,
+    section.active .roommate-grid,
+    section.active .timeline,
+    section.active .msg-form,
+    section.active .moment-post-box,
+    section.active .joke-grid { animation-delay: 0.12s; }
+    section.active .memory-card { animation-delay: 0.2s; }
+
+    nav::after {
+      content: "";
+      position: absolute;
+      inset: 1px;
+      border-radius: inherit;
+      pointer-events: none;
+      background: linear-gradient(100deg, transparent 0%, rgba(255,255,255,0.35) 45%, transparent 62%);
+      transform: translateX(-120%) skewX(-18deg);
+      animation: slowSheen 6s ease-in-out infinite;
+    }
+
+    .album-cover {
+      position: relative;
+      min-height: 392px;
+      padding-bottom: 0;
+      isolation: isolate;
+      transform: none !important;
+      animation: none !important;
+      opacity: 1 !important;
+      animation-play-state: running !important;
+    }
+    .album-cover::before {
+      content: "";
+      position: absolute;
+      inset: 10px;
+      border: 1px solid rgba(255,255,255,0.36);
+      border-radius: calc(var(--radius-lg) - 8px);
+      pointer-events: none;
+      z-index: 3;
+    }
+    .album-cover::after {
+      display: none;
+    }
+    .album-cover:hover::after {
+      display: none;
+    }
+    .album-cover:hover {
+      transform: translateY(-6px) !important;
+      animation: none !important;
+      opacity: 1 !important;
+    }
+    .album-cover-img {
+      height: 292px;
+    }
+    .album-cover-img::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(to bottom, rgba(17,26,23,0.24), transparent 34%, rgba(17,26,23,0.78)),
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 9px);
+      mix-blend-mode: normal;
+      opacity: 0.18;
+      pointer-events: none;
+    }
+    .album-cover-img img {
+      transform: scale(1.02);
+      transition: transform 1s cubic-bezier(0.2,0.8,0.2,1), filter 0.8s ease;
+    }
+    .album-cover:hover .album-cover-img img {
+      transform: scale(1.09);
+      filter: saturate(1.08) contrast(1.06);
+    }
+    .album-cover:hover .album-cover-info,
+    .album-cover:hover .album-film-mark,
+    .album-cover:hover .album-cover-img,
+    .album-cover:hover .album-cover-img img {
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+    .album-cover-icon {
+      display: none;
+    }
+    .album-film-mark {
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      z-index: 5;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 11px;
+      border-radius: 999px;
+      background: rgba(255,253,248,0.88);
+      color: var(--deep);
+      font-family: Inter, sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.2px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.16);
+    }
+    .album-film-mark::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--sky-blue), var(--sunset));
+    }
+    .album-cover-info {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 5;
+      padding: 72px 22px 22px;
+      text-align: left;
+      background: linear-gradient(to top, rgba(17,26,23,0.88), rgba(17,26,23,0.50), transparent);
+      color: #FFFDF8;
+    }
+    .album-cover-name,
+    .album-cover-desc,
+    .album-cover-count {
+      margin: 0;
+      color: inherit;
+    }
+    .album-cover-name {
+      font-size: 23px;
+      line-height: 1.15;
+      color: #FFFDF8;
+      text-shadow: 0 10px 28px rgba(0,0,0,0.25);
+    }
+    .album-cover-desc {
+      margin-top: 7px;
+      color: rgba(255,253,248,0.72);
+      font-size: 11px;
+      letter-spacing: 1.8px;
+    }
+    .album-cover-count {
+      margin-top: 10px;
+      color: rgba(255,253,248,0.86);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .album-detail-header {
+      position: relative;
+      overflow: hidden;
+      padding: 26px 28px;
+      border: 1px solid rgba(23,35,31,0.10);
+      border-radius: var(--radius-lg);
+      background:
+        linear-gradient(135deg, rgba(255,253,248,0.88), rgba(235,241,235,0.70)),
+        linear-gradient(90deg, rgba(133,175,203,0.12), rgba(227,161,90,0.10));
+      box-shadow: var(--shadow-sm);
+    }
+    .album-detail-header::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: -40%;
+      height: 42%;
+      background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.45), transparent);
+      animation: filmScan 5.2s ease-in-out infinite;
+      pointer-events: none;
+    }
+    .album-detail-icon {
+      width: auto;
+      height: auto;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--deep);
+      color: #FFFDF8;
+      font-family: Inter, sans-serif;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 1.6px;
+      box-shadow: none;
+    }
+    .album-detail-title {
+      position: relative;
+      z-index: 1;
+    }
+    .album-upload {
+      transition: transform 0.4s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.4s ease, border-color 0.4s ease;
+    }
+    .album-upload:hover {
+      transform: translateY(-4px);
+    }
+    .album-upload-icon {
+      transition: transform 0.5s cubic-bezier(0.2,0.8,0.2,1);
+    }
+    .album-upload:hover .album-upload-icon {
+      transform: translateY(-3px) rotate(-3deg);
+      animation: none;
+    }
+    .album-item {
+      overflow: hidden;
+      transition: transform 0.45s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.45s ease;
+    }
+    .album-item::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(circle at 50% 20%, rgba(255,255,255,0.18), transparent 38%);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    .album-item:hover::after {
+      opacity: 1;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .album-cover {
+        min-height: 360px;
+      }
+      .album-cover-img {
+        height: 260px;
+      }
+      .album-detail-header {
+        padding: 22px;
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+
+    /* Stable album poster cards: never hide content on hover */
+    .album-cover,
+    .album-cover:hover,
+    .album-cover:focus,
+    .album-cover:focus-within {
+      opacity: 1 !important;
+      visibility: visible !important;
+      filter: none !important;
+    }
+    .album-cover {
+      background: #fff;
+      box-shadow: 0 16px 46px rgba(23,35,31,0.10);
+      transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease !important;
+    }
+    .album-cover:hover {
+      border-color: rgba(111,138,120,0.32);
+      box-shadow: 0 24px 68px rgba(23,35,31,0.16);
+    }
+    .album-cover-info {
+      opacity: 1 !important;
+      visibility: visible !important;
+      background: linear-gradient(to top, rgba(17,26,23,0.90), rgba(17,26,23,0.58), transparent);
+    }
+    .album-film-mark {
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
 </style>
 </head>
 <body>
@@ -475,10 +1475,10 @@
   <div id="splash">
     <div class="splash-bg"></div>
     <div class="splash-content">
-      <div class="splash-room">212 宿舍</div>
-      <h1 class="splash-title">毕业快乐</h1>
-      <p class="splash-sub">我们的小窝 · 记忆永存</p>
-      <button class="splash-btn" onclick="enterSite()">推门而入</button>
+      <div class="splash-room">212 Youth Archive</div>
+      <h1 class="splash-title">青春留影馆</h1>
+      <p class="splash-sub">我们在这里住过，也在这里长大</p>
+      <button class="splash-btn" onclick="enterSite()">进入相册</button>
     </div>
   </div>
 
@@ -515,8 +1515,8 @@
 
   <!-- Home -->
   <section id="home" class="active">
-    <p class="section-label">Home</p>
-    <h2 class="section-title">欢迎回家</h2>
+    <p class="section-label">Opening Scene</p>
+    <h2 class="section-title">我们的小小宇宙</h2>
     <div class="hero-stats">
       <div class="stat-card"><div class="stat-number" data-count="1461">0</div><div class="stat-label">一起住了 · 天</div></div>
       <div class="stat-card"><div class="stat-number" data-count="2847">0</div><div class="stat-label">拍了 · 张照片</div></div>
@@ -531,8 +1531,8 @@
 
   <!-- Album -->
   <section id="album">
-    <p class="section-label">Gallery</p>
-    <h2 class="section-title">光影瞬间</h2>
+    <p class="section-label">Film Roll</p>
+    <h2 class="section-title">青春底片</h2>
 
     <div id="albumListView">
       <div class="album-covers" id="albumCovers"></div>
@@ -555,8 +1555,8 @@
 
   <!-- Roommates -->
   <section id="roommates">
-    <p class="section-label">Roommates</p>
-    <h2 class="section-title">我们四个</h2>
+    <p class="section-label">Cast</p>
+    <h2 class="section-title">同住一场青春</h2>
     <div class="roommate-grid">
       <div class="roommate-card"><div class="rm-avatar" style="background:linear-gradient(135deg,#D4A574,#E8D5C4);">👤</div><div class="rm-name">张三</div><div class="rm-nickname">@ 张大厨</div><div class="rm-tags"><span class="rm-tag">干饭王</span><span class="rm-tag">厨神</span></div></div>
       <div class="roommate-card"><div class="rm-avatar" style="background:linear-gradient(135deg,#C9A96E,#D4A574);">👤</div><div class="rm-name">李四</div><div class="rm-nickname">@ 李学霸</div><div class="rm-tags"><span class="rm-tag">熬夜冠军</span><span class="rm-tag">学霸</span></div></div>
@@ -567,8 +1567,8 @@
 
   <!-- Stories -->
   <section id="stories">
-    <p class="section-label">Timeline</p>
-    <h2 class="section-title">宿舍故事</h2>
+    <p class="section-label">Storyline</p>
+    <h2 class="section-title">时间写下的故事</h2>
     <div class="timeline">
       <div class="tl-item"><div class="tl-dot"></div><div class="tl-content"><div class="tl-date">2020.09.01</div><div class="tl-title">我们第一次见面</div><div class="tl-desc">拖着行李箱在宿舍门口相遇，四个人面面相觑，谁都不好意思先说话。</div></div></div>
       <div class="tl-item"><div class="tl-dot"></div><div class="tl-content"><div class="tl-date">2020.12.25</div><div class="tl-title">第一次一起过圣诞</div><div class="tl-desc">在宿舍挂满了彩灯，用外卖凑了一顿"圣诞大餐"。</div></div></div>
@@ -580,8 +1580,8 @@
 
   <!-- Messages -->
   <section id="messages">
-    <p class="section-label">Messages</p>
-    <h2 class="section-title">想对你说</h2>
+    <p class="section-label">Postcards</p>
+    <h2 class="section-title">写给彼此的明信片</h2>
     <div class="msg-form">
       <textarea id="msgInput" placeholder="写下你想对室友说的话…（最多 300 字）" maxlength="300"></textarea>
       <div class="btn-row">
@@ -597,8 +1597,8 @@
   </section>
 
   <section id="moment">
-    <p class="section-label">Moments</p>
-    <h2 class="section-title">212 朋友圈</h2>
+    <p class="section-label">Live Notes</p>
+    <h2 class="section-title">此刻仍在发生</h2>
     <div class="moment-post-box">
       <textarea id="momentText" placeholder="说点什么..." maxlength="500"></textarea>
       <div class="moment-post-row">
@@ -615,8 +1615,8 @@
 
   <!-- Jokes -->
   <section id="jokes">
-    <p class="section-label">Inside Jokes</p>
-    <h2 class="section-title">宿舍梗百科</h2>
+    <p class="section-label">Secret Code</p>
+    <h2 class="section-title">只有我们才懂</h2>
     <p style="color:var(--warm-brown);font-size:14px;margin-top:8px;">只有我们才懂的专属密码 🤫</p>
     <div class="joke-grid">
       <div class="joke-card"><div class="joke-term">🎯 "还有三分钟"</div><div class="joke-explanation">张三每次说"马上到"之后至少要半个小时。成了宿舍形容"遥遥无期"的专属黑话。</div></div>
@@ -1217,11 +2217,12 @@
       albumMeta.forEach(album => {
         const count = photos.filter(p => p.cat === album.id).length;
         const card = document.createElement('div');
-        card.className = 'album-cover tilt-card';
-        card.innerHTML = '<div class="album-cover-img"><img src="' + album.img + '" alt="' + album.name + '" loading="lazy" /><div class="album-cover-overlay"></div><div class="album-cover-icon">' + album.icon + '</div></div>' +
-          '<div class="album-cover-name">' + album.name + '</div>' +
+        card.className = 'album-cover';
+        var code = 'ROLL ' + String(albumMeta.indexOf(album) + 1).padStart(2, '0');
+        card.innerHTML = '<div class="album-cover-img"><img src="' + album.img + '" alt="' + album.name + '" loading="lazy" /><div class="album-cover-overlay"></div><div class="album-film-mark">' + code + '</div></div>' +
+          '<div class="album-cover-info"><div class="album-cover-name">' + album.name + '</div>' +
 	          '<div class="album-cover-desc">' + album.desc + '</div>' +
-          '<div class="album-cover-count">' + count + ' 张照片</div>';
+          '<div class="album-cover-count">' + count + ' 张照片</div></div>';
         card.onclick = function() { openAlbum(album.id, album.name, album.icon); };
         container.appendChild(card);
       });
@@ -1234,7 +2235,7 @@
       faceFilter = '';
       document.getElementById('albumListView').style.display = 'none';
       document.getElementById('albumDetailView').style.display = 'block';
-      document.getElementById('albumDetailIcon').textContent = icon || '';
+      document.getElementById('albumDetailIcon').textContent = 'FILM 212';
       document.getElementById('albumDetailTitle').textContent = name;
       var zt = document.getElementById('uploadZoneText');
       if (zt) zt.textContent = '点击上传照片到 ' + name;
