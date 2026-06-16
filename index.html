@@ -265,6 +265,11 @@
     #musicBtn { position: fixed; bottom: 32px; right: 32px; z-index: 90; width: 48px; height: 48px; border-radius: 50%; background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); box-shadow: var(--shadow-md); cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 18px; transition: all var(--transition); }
     #musicBtn:hover { transform: scale(1.1); box-shadow: var(--shadow-lg); }
     #musicBtn.playing { border-color: var(--golden); }
+    /* Name badge */
+    #nameBadge { position: fixed; bottom: 32px; left: 32px; z-index: 90; display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 100px; background: var(--glass-bg); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); box-shadow: var(--shadow-md); font-family: Inter,sans-serif; font-size: 12px; color: var(--deep); cursor: pointer; transition: all 0.3s; }
+    #nameBadge:hover { border-color: var(--golden); box-shadow: var(--shadow-lg); }
+    #nameBadge .name-edit { font-size: 10px; color: var(--milky-tea); opacity: 0; transition: opacity 0.3s; }
+    #nameBadge:hover .name-edit { opacity: 1; }
 
     /* Responsive */
     @media (max-width: 768px) { .album-cover { flex: 0 0 200px; } .album-cover-img { height: 150px; font-size: 40px; }
@@ -498,6 +503,7 @@
 
   <!-- Music -->
   <button id="musicBtn" onclick="toggleMusic()">♫</button>
+  <div id="nameBadge" onclick="editMyName()">👤 <span id="nameDisplay"></span> <span class="name-edit">编辑</span></div>
 
   <!-- Lightbox -->
   <div id="lightbox" onclick="closeLightbox()">
@@ -1307,8 +1313,11 @@
     }
 
     let myName = localStorage.getItem('dorm212_name') || '';
+    updateNameDisplay();
     function showNamePrompt() { var p = document.getElementById('namePrompt'); if (p) p.style.display = 'flex'; }
-    function setName() { var inp = document.getElementById('nameInput'); var n = inp.value.trim(); if (!n) { inp.style.borderColor = '#e74c3c'; return; } myName = n; localStorage.setItem('dorm212_name', n); document.getElementById('namePrompt').style.display = 'none'; }
+    function setName() { var inp = document.getElementById('nameInput'); var n = inp.value.trim(); if (!n) { inp.style.borderColor = '#e74c3c'; return; } myName = n; localStorage.setItem('dorm212_name', n); document.getElementById('namePrompt').style.display = 'none'; updateNameDisplay(); }
+    function editMyName() { document.getElementById('nameInput').value = myName || ''; showNamePrompt(); }
+    function updateNameDisplay() { var d = document.getElementById('nameDisplay'); if (d) d.textContent = myName || '点击设置名字'; }
     document.addEventListener('keydown', function(e) { if (e.key === 'Enter' && document.getElementById('namePrompt')?.style.display === 'flex') setName(); });
     // ==================== MOMENTS (WeChat-style feed) ====================
     var momentImages = [];
