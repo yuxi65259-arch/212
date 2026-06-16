@@ -927,7 +927,7 @@
             }
           };
           imgEl.onload = function() {
-            item.classList.add(imgEl.naturalWidth > imgEl.naturalHeight ? 'landscape' : 'portrait');
+            item.classList.add(imgEl.naturalWidth > imgEl.naturalHeight ? 'landscape' : 'portrait'); // keep for potential use
           };
           item.appendChild(imgEl);
           item.classList.add('landscape');
