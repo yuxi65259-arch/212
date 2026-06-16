@@ -719,7 +719,7 @@
           const img = new Image();
           img.onload = function() {
             const canvas = document.createElement('canvas');
-            const MAX = 1200;
+            const MAX = 4000;
             let w = img.naturalWidth, h = img.naturalHeight;
             if (w > MAX || h > MAX) {
               if (w > h) { h = h * MAX / w; w = MAX; }
@@ -730,7 +730,7 @@
             ctx.fillStyle = '#fff';
             ctx.fillRect(0, 0, w, h);
             ctx.drawImage(img, 0, 0, w, h);
-            resolve(canvas.toDataURL('image/jpeg', 0.8));
+            resolve(canvas.toDataURL('image/jpeg', 0.95));
           };
           img.onerror = reject;
           img.src = e.target.result;
@@ -1357,10 +1357,10 @@
       for (var i = 0; i < momentImages.length; i++) {
         var img = new Image(); img.src = momentImages[i];
         await new Promise(function(r) { img.onload = r; });
-        var M = 600, w = img.naturalWidth, h = img.naturalHeight;
+        var M = 2000, w = img.naturalWidth, h = img.naturalHeight;
         if (w > M || h > M) { if (w > h) { h = h * M / w; w = M; } else { w = w * M / h; h = M; } }
         var cv = document.createElement('canvas'); cv.width = w; cv.height = h; cv.getContext('2d').drawImage(img, 0, 0, w, h);
-        cimgs.push(cv.toDataURL('image/jpeg', 0.7));
+        cimgs.push(cv.toDataURL('image/jpeg', 0.85));
       }
       var mom = { id: 'md' + Date.now(), author: myName, time: new Date().toLocaleString('zh-CN'), text: t, images: cimgs, likes: [], comments: [] };
       try { await saveMoment(mom); momentImages = []; renderMP(); document.getElementById('momentText').value = ''; renderMomentFeed(); }
