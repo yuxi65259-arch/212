@@ -986,6 +986,21 @@
       font-weight: 700;
       line-height: 1;
     }
+    .person-rename-btn {
+      margin-top: 2px;
+      padding: 4px 9px;
+      border: 1px solid rgba(23,35,31,0.12);
+      border-radius: 999px;
+      background: rgba(255,253,248,0.92);
+      color: var(--campus-green);
+      font-size: 11px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .person-rename-btn:hover {
+      background: var(--campus-green);
+      color: #fff;
+    }
     .active-person-bar {
       display: none;
       align-items: center;
@@ -2577,10 +2592,18 @@
           const avatar = avatarPhoto
             ? '<span class="person-avatar"><img src="' + avatarPhoto.url + '" alt="' + escapeHtml(name) + '" loading="lazy" /></span>'
             : '<span class="person-avatar">' + escapeHtml(name.slice(0, 1) || '?') + '</span>';
-          chip.innerHTML = avatar + '<span class="person-name">' + escapeHtml(name) + '</span><small>' + ((person.photoIds || []).length) + ' 张</small>';
+          chip.innerHTML = avatar + '<span class="person-name">' + escapeHtml(name) + '</span><small>' + ((person.photoIds || []).length) + ' 张</small><span class="person-rename-btn">改名</span>';
           chip.onclick = function() { selectPerson(person.id); };
           chip.ondblclick = function(e) { e.preventDefault(); renamePerson(person.id); };
-          chip.title = '点击头像查看这个人的所有照片，双击改名';
+          const renameBtn = chip.querySelector('.person-rename-btn');
+          if (renameBtn) {
+            renameBtn.onclick = function(e) {
+              e.preventDefault();
+              e.stopPropagation();
+              renamePerson(person.id);
+            };
+          }
+          chip.title = '点击头像查看这个人的所有照片，点击改名可修改名称';
           list.appendChild(chip);
         });
       renderActivePersonBar();
