@@ -1804,8 +1804,11 @@
     })();
     const IS_LOCAL = window.location.origin === 'http://localhost:3456';
     const FACE_MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
-    const FACE_MATCH_THRESHOLD = 0.43;
+    const FACE_SINGLE_MATCH_THRESHOLD = 0.32;
+    const FACE_GROUP_MATCH_THRESHOLD = 0.30;
+    const FACE_MATCH_MARGIN = 0.055;
     const FACE_MAX_REFERENCES = 8;
+    const FACE_REFERENCE_DISTANCE_MAX = 0.30;
 
 
     let currentFilter = 'all';
@@ -2012,9 +2015,11 @@
       return Array.from(desc).map(n => Math.round(n * 1000000) / 1000000);
     }
 
-    function findBestPerson(descriptor, index) {
+    function findBestPerson(descriptor, index, threshold, options) {
+      options = options || {};
       let best = null;
       let bestDistance = Infinity;
+      let secondDistance = Infinity;
       index.people.forEach(person => {
         const references = Array.isArray(person.descriptors) && person.descriptors.length
           ? person.descriptors
@@ -2022,17 +2027,26 @@
         references.forEach(reference => {
           const distance = vectorDistance(descriptor, reference);
           if (distance < bestDistance) {
+            secondDistance = bestDistance;
             best = person;
             bestDistance = distance;
+          } else if (distance < secondDistance) {
+            secondDistance = distance;
           }
         });
       });
-      return best && bestDistance <= FACE_MATCH_THRESHOLD ? { person: best, distance: bestDistance } : null;
+      const margin = options.requireMargin ? FACE_MATCH_MARGIN : 0;
+      const hasEnoughMargin = !isFinite(secondDistance) || (secondDistance - bestDistance) >= margin;
+      return best && bestDistance <= threshold && hasEnoughMargin
+        ? { person: best, distance: bestDistance, secondDistance: secondDistance }
+        : null;
     }
 
-    function findBestPersonExcluding(descriptor, index, excludedIds) {
+    function findBestPersonExcluding(descriptor, index, excludedIds, threshold, options) {
+      options = options || {};
       let best = null;
       let bestDistance = Infinity;
+      let secondDistance = Infinity;
       index.people.forEach(person => {
         if (excludedIds && excludedIds.has(person.id)) return;
         const references = Array.isArray(person.descriptors) && person.descriptors.length
@@ -2041,12 +2055,19 @@
         references.forEach(reference => {
           const distance = vectorDistance(descriptor, reference);
           if (distance < bestDistance) {
+            secondDistance = bestDistance;
             best = person;
             bestDistance = distance;
+          } else if (distance < secondDistance) {
+            secondDistance = distance;
           }
         });
       });
-      return best && bestDistance <= FACE_MATCH_THRESHOLD ? { person: best, distance: bestDistance } : null;
+      const margin = options.requireMargin ? FACE_MATCH_MARGIN : 0;
+      const hasEnoughMargin = !isFinite(secondDistance) || (secondDistance - bestDistance) >= margin;
+      return best && bestDistance <= threshold && hasEnoughMargin
+        ? { person: best, distance: bestDistance, secondDistance: secondDistance }
+        : null;
     }
 
     function addPersonReference(person, descriptor) {
@@ -2056,7 +2077,7 @@
       const nearest = person.descriptors.reduce((best, reference) => {
         return Math.min(best, vectorDistance(descriptor, reference));
       }, Infinity);
-      if (person.descriptors.length < FACE_MAX_REFERENCES && nearest > 0.18) {
+      if (person.descriptors.length < FACE_MAX_REFERENCES && nearest > 0.16 && nearest <= FACE_REFERENCE_DISTANCE_MAX) {
         person.descriptors.push(descriptor);
       }
     }
@@ -2126,7 +2147,7 @@
     }
 
     function assignSingleFaceToPerson(descriptor, photo, index) {
-      const match = findBestPerson(descriptor, index);
+      const match = findBestPerson(descriptor, index, FACE_SINGLE_MATCH_THRESHOLD, { requireMargin: true });
       let person = match ? match.person : null;
       if (!person) {
         person = createPerson(descriptor, photo, index);
@@ -2139,12 +2160,12 @@
     }
 
     function assignGroupFaceToPerson(descriptor, photo, index, usedPersonIds) {
-      const match = findBestPersonExcluding(descriptor, index, usedPersonIds);
+      const match = findBestPersonExcluding(descriptor, index, usedPersonIds, FACE_GROUP_MATCH_THRESHOLD, { requireMargin: true });
       if (!match || !canUseExistingPersonInPhoto(match.person, usedPersonIds)) return null;
       const person = match.person;
       attachPhotoToPerson(person, photo, 'group');
       if (usedPersonIds) usedPersonIds.add(person.id);
-      return person;
+      return { person: person, distance: match.distance, secondDistance: match.secondDistance };
     }
 
     function loadPhotoElement(photo) {
@@ -2234,13 +2255,16 @@
           const usedPersonIds = new Set();
           working.photoFaces[item.photo.id] = item.detections.map(result => {
             const descriptor = roundedDescriptor(result.descriptor);
-            const person = assignGroupFaceToPerson(descriptor, item.photo, working, usedPersonIds);
+            const match = assignGroupFaceToPerson(descriptor, item.photo, working, usedPersonIds);
+            const person = match ? match.person : null;
             const box = result.detection && result.detection.box ? result.detection.box : {};
             return {
               personId: person ? person.id : null,
               descriptor: descriptor,
               source: 'group',
               matched: !!person,
+              distance: match ? Math.round(match.distance * 1000) / 1000 : null,
+              margin: match && isFinite(match.secondDistance) ? Math.round((match.secondDistance - match.distance) * 1000) / 1000 : null,
               score: result.detection ? Math.round(result.detection.score * 1000) / 1000 : null,
               box: {
                 x: Math.round(box.x || 0),
