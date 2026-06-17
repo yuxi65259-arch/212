@@ -1804,7 +1804,8 @@
     })();
     const IS_LOCAL = window.location.origin === 'http://localhost:3456';
     const FACE_MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
-    const FACE_MATCH_THRESHOLD = 0.52;
+    const FACE_MATCH_THRESHOLD = 0.43;
+    const FACE_MAX_REFERENCES = 8;
 
 
     let currentFilter = 'all';
@@ -1908,6 +1909,11 @@
       next.version = next.version || 1;
       next.people = Array.isArray(next.people) ? next.people : [];
       next.photoFaces = next.photoFaces && typeof next.photoFaces === 'object' ? next.photoFaces : {};
+      next.people.forEach(person => {
+        if (!Array.isArray(person.descriptors)) {
+          person.descriptors = person.descriptor ? [person.descriptor] : [];
+        }
+      });
       return next;
     }
 
@@ -2007,42 +2013,117 @@
       let best = null;
       let bestDistance = Infinity;
       index.people.forEach(person => {
-        const distance = vectorDistance(descriptor, person.descriptor);
-        if (distance < bestDistance) {
-          best = person;
-          bestDistance = distance;
-        }
+        const references = Array.isArray(person.descriptors) && person.descriptors.length
+          ? person.descriptors
+          : (person.descriptor ? [person.descriptor] : []);
+        references.forEach(reference => {
+          const distance = vectorDistance(descriptor, reference);
+          if (distance < bestDistance) {
+            best = person;
+            bestDistance = distance;
+          }
+        });
       });
       return best && bestDistance <= FACE_MATCH_THRESHOLD ? { person: best, distance: bestDistance } : null;
     }
 
-    function updatePersonDescriptor(person, descriptor) {
-      const count = Math.max(1, person.faceCount || 1);
-      person.descriptor = person.descriptor.map((value, i) => {
-        return Math.round(((value * count + descriptor[i]) / (count + 1)) * 1000000) / 1000000;
+    function findBestPersonExcluding(descriptor, index, excludedIds) {
+      let best = null;
+      let bestDistance = Infinity;
+      index.people.forEach(person => {
+        if (excludedIds && excludedIds.has(person.id)) return;
+        const references = Array.isArray(person.descriptors) && person.descriptors.length
+          ? person.descriptors
+          : (person.descriptor ? [person.descriptor] : []);
+        references.forEach(reference => {
+          const distance = vectorDistance(descriptor, reference);
+          if (distance < bestDistance) {
+            best = person;
+            bestDistance = distance;
+          }
+        });
       });
-      person.faceCount = count + 1;
+      return best && bestDistance <= FACE_MATCH_THRESHOLD ? { person: best, distance: bestDistance } : null;
     }
 
-    function assignFaceToPerson(descriptor, photo, index) {
-      const match = findBestPerson(descriptor, index);
-      let person = match ? match.person : null;
-      if (!person) {
-        const nextNumber = index.people.length + 1;
-        person = {
-          id: 'person_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
-          name: '人物 ' + nextNumber,
-          descriptor: descriptor,
-          faceCount: 1,
-          photoIds: [],
-          coverPhotoId: photo.id
-        };
-        index.people.push(person);
-      } else {
-        updatePersonDescriptor(person, descriptor);
+    function addPersonReference(person, descriptor) {
+      if (!Array.isArray(person.descriptors)) {
+        person.descriptors = person.descriptor ? [person.descriptor] : [];
       }
+      const nearest = person.descriptors.reduce((best, reference) => {
+        return Math.min(best, vectorDistance(descriptor, reference));
+      }, Infinity);
+      if (person.descriptors.length < FACE_MAX_REFERENCES && nearest > 0.18) {
+        person.descriptors.push(descriptor);
+      }
+    }
+
+    function recomputePersonCentroid(person) {
+      const refs = Array.isArray(person.descriptors) && person.descriptors.length
+        ? person.descriptors
+        : (person.descriptor ? [person.descriptor] : []);
+      if (!refs.length) return;
+      const next = refs[0].map((_, i) => {
+        const value = refs.reduce((sum, reference) => sum + reference[i], 0) / refs.length;
+        return Math.round(value * 1000000) / 1000000;
+      });
+      person.descriptor = next;
+    }
+
+    function rebuildPeoplePhotoIds(index) {
+      index.people.forEach(person => {
+        person.photoIds = [];
+        person.faceCount = 0;
+      });
+      Object.entries(index.photoFaces || {}).forEach(([photoId, faces]) => {
+        (faces || []).forEach(face => {
+          const person = index.people.find(p => p.id === face.personId);
+          if (!person) return;
+          if (!person.photoIds.includes(photoId)) person.photoIds.push(photoId);
+          person.faceCount = (person.faceCount || 0) + 1;
+          if (!person.coverPhotoId) person.coverPhotoId = photoId;
+        });
+      });
+      index.people = index.people.filter(person => (person.faceCount || 0) > 0);
+      return index;
+    }
+
+    function canUseExistingPersonInPhoto(person, usedPersonIds) {
+      return !usedPersonIds || !usedPersonIds.has(person.id);
+    }
+
+    function createPerson(descriptor, photo, index) {
+      const nextNumber = index.people.length + 1;
+      const person = {
+        id: 'person_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+        name: '人物 ' + nextNumber,
+        descriptor: descriptor,
+        descriptors: [descriptor],
+        faceCount: 0,
+        photoIds: [],
+        coverPhotoId: photo.id
+      };
+      index.people.push(person);
+      return person;
+    }
+
+    function attachPhotoToPerson(person, photo) {
       if (!person.photoIds.includes(photo.id)) person.photoIds.push(photo.id);
       if (!person.coverPhotoId) person.coverPhotoId = photo.id;
+      person.faceCount = (person.faceCount || 0) + 1;
+    }
+
+    function assignFaceToPerson(descriptor, photo, index, usedPersonIds) {
+      const match = findBestPersonExcluding(descriptor, index, usedPersonIds);
+      let person = match ? match.person : null;
+      if (!person || !canUseExistingPersonInPhoto(person, usedPersonIds)) {
+        person = createPerson(descriptor, photo, index);
+      } else {
+        addPersonReference(person, descriptor);
+        recomputePersonCentroid(person);
+      }
+      attachPhotoToPerson(person, photo);
+      if (usedPersonIds) usedPersonIds.add(person.id);
       return person;
     }
 
@@ -2097,9 +2178,10 @@
             continue;
           }
           const detections = await faceapi.detectAllFaces(img).withFaceLandmarks().withFaceDescriptors();
+          const usedPersonIds = new Set();
           working.photoFaces[photo.id] = detections.map(result => {
             const descriptor = roundedDescriptor(result.descriptor);
-            const person = assignFaceToPerson(descriptor, photo, working);
+            const person = assignFaceToPerson(descriptor, photo, working, usedPersonIds);
             const box = result.detection && result.detection.box ? result.detection.box : {};
             facesFound++;
             return {
@@ -2118,6 +2200,7 @@
           await new Promise(r => setTimeout(r, 20));
         }
 
+        rebuildPeoplePhotoIds(working);
         await saveFaceIndex(working);
         renderPeopleList();
         renderAlbum();
