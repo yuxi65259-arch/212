@@ -76,6 +76,11 @@ function normalizeFaceIndex(data) {
   next.people = Array.isArray(next.people) ? next.people : [];
   next.photoFaces = next.photoFaces && typeof next.photoFaces === 'object' ? next.photoFaces : {};
   next.updatedAt = next.updatedAt || null;
+  next.people.forEach(person => {
+    if (!Array.isArray(person.descriptors)) {
+      person.descriptors = person.descriptor ? [person.descriptor] : [];
+    }
+  });
   return next;
 }
 
