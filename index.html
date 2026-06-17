@@ -895,32 +895,72 @@
     .people-list {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 14px;
+      gap: 14px;
+      margin-top: 16px;
     }
     .person-chip {
       display: inline-flex;
+      flex-direction: column;
       align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 999px;
+      justify-content: center;
+      gap: 7px;
+      width: 86px;
+      min-height: 112px;
+      padding: 10px 8px;
+      border-radius: 18px;
       border: 1px solid rgba(23,35,31,0.12);
       background: rgba(255,253,248,0.92);
       color: var(--deep);
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 800;
       cursor: pointer;
-      transition: all 0.25s ease;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, background 0.25s ease;
     }
     .person-chip.active,
     .person-chip:hover {
-      background: var(--deep);
+      background: #FFFDF8;
+      color: var(--deep);
+      border-color: var(--campus-green);
+      box-shadow: 0 16px 42px rgba(23,35,31,0.13);
+      transform: translateY(-3px);
+    }
+    .person-chip.active {
+      box-shadow: 0 0 0 3px rgba(133,175,203,0.18), 0 16px 42px rgba(23,35,31,0.13);
+    }
+    .person-avatar {
+      width: 58px;
+      height: 58px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      overflow: hidden;
+      background: linear-gradient(135deg, var(--campus-green), var(--sky-blue));
       color: #fff;
-      border-color: var(--deep);
+      font-size: 18px;
+      font-weight: 900;
+      border: 3px solid rgba(255,253,248,0.96);
+      box-shadow: 0 8px 22px rgba(23,35,31,0.18);
+      flex: 0 0 auto;
+    }
+    .person-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .person-name {
+      width: 100%;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .person-chip small {
       opacity: 0.72;
       font-weight: 700;
+      line-height: 1;
     }
     .active-person-bar {
       display: none;
@@ -2092,6 +2132,19 @@
       return faceIndex.people.find(p => p.id === id);
     }
 
+    function getPhotoById(id) {
+      return allPhotos.find(p => p.id === id) || samplePhotos.find(p => p.id === id) || null;
+    }
+
+    function getPersonAvatarPhoto(person) {
+      if (!person) return null;
+      let photo = getPhotoById(person.coverPhotoId);
+      if (!photo && person.photoIds && person.photoIds.length) {
+        photo = getPhotoById(person.photoIds[0]);
+      }
+      return photo && photo.url ? photo : null;
+    }
+
     function renderPeopleList() {
       const list = document.getElementById('peopleList');
       if (!list) return;
@@ -2109,10 +2162,15 @@
           const chip = document.createElement('button');
           chip.type = 'button';
           chip.className = 'person-chip' + (faceFilter === person.id ? ' active' : '');
-          chip.innerHTML = '<span>' + escapeHtml(person.name || '未命名') + '</span><small>' + ((person.photoIds || []).length) + ' 张</small>';
+          const name = person.name || '未命名';
+          const avatarPhoto = getPersonAvatarPhoto(person);
+          const avatar = avatarPhoto
+            ? '<span class="person-avatar"><img src="' + avatarPhoto.url + '" alt="' + escapeHtml(name) + '" loading="lazy" /></span>'
+            : '<span class="person-avatar">' + escapeHtml(name.slice(0, 1) || '?') + '</span>';
+          chip.innerHTML = avatar + '<span class="person-name">' + escapeHtml(name) + '</span><small>' + ((person.photoIds || []).length) + ' 张</small>';
           chip.onclick = function() { selectPerson(person.id); };
           chip.ondblclick = function(e) { e.preventDefault(); renamePerson(person.id); };
-          chip.title = '单击筛选，双击改名';
+          chip.title = '点击头像查看这个人的所有照片，双击改名';
           list.appendChild(chip);
         });
       renderActivePersonBar();
@@ -2136,6 +2194,7 @@
 
     function selectPerson(id) {
       faceFilter = id;
+      currentFilter = 'all';
       VISIBLE_COUNT = 50;
       renderPeopleList();
       renderAlbum();
@@ -2143,6 +2202,7 @@
 
     function clearFaceFilter() {
       faceFilter = '';
+      currentFilter = currentAlbum;
       renderPeopleList();
       renderAlbum();
     }
