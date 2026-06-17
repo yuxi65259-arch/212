@@ -80,6 +80,9 @@ function normalizeFaceIndex(data) {
     if (!Array.isArray(person.descriptors)) {
       person.descriptors = person.descriptor ? [person.descriptor] : [];
     }
+    if (!Array.isArray(person.singlePhotoIds)) {
+      person.singlePhotoIds = person.coverPhotoId ? [person.coverPhotoId] : [];
+    }
   });
   return next;
 }
