@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>212 宿舍 · 毕业纪念册</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet" />
-  <!-- Face detection removed - use cloud API for production -->
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; }
@@ -838,6 +838,111 @@
       color: var(--deep);
       border: 1px solid rgba(133,175,203,0.20);
     }
+    .face-panel {
+      margin: 18px 0 0;
+      padding: 20px;
+      border: 1px solid rgba(23,35,31,0.10);
+      border-radius: 20px;
+      background: rgba(255,253,248,0.82);
+      box-shadow: var(--shadow-sm);
+    }
+    .face-panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .face-panel-title {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--deep);
+    }
+    .face-panel-sub {
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--ink-muted);
+    }
+    .face-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .face-btn {
+      border: 1px solid rgba(23,35,31,0.12);
+      border-radius: 999px;
+      background: #FFFDF8;
+      color: var(--deep);
+      padding: 9px 14px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+    .face-btn:hover {
+      transform: translateY(-2px);
+      border-color: var(--campus-green);
+      box-shadow: var(--shadow-md);
+    }
+    .face-status {
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--warm-brown);
+      min-height: 18px;
+    }
+    .people-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .person-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(23,35,31,0.12);
+      background: rgba(255,253,248,0.92);
+      color: var(--deep);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    .person-chip.active,
+    .person-chip:hover {
+      background: var(--deep);
+      color: #fff;
+      border-color: var(--deep);
+    }
+    .person-chip small {
+      opacity: 0.72;
+      font-weight: 700;
+    }
+    .active-person-bar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(133,175,203,0.13);
+      border: 1px solid rgba(133,175,203,0.20);
+      color: var(--deep);
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .active-person-bar button {
+      border: none;
+      background: transparent;
+      color: var(--campus-green);
+      font-weight: 900;
+      cursor: pointer;
+    }
 
     .album-grid {
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -1550,6 +1655,25 @@
         <div class="upload-progress" id="uploadProgress" style="display:none;"><div class="upload-progress-bar" id="uploadProgressBar"></div></div>
         <div class="upload-status" id="uploadStatus"></div>
       </div>
+      <div class="face-panel" id="facePanel">
+        <div class="face-panel-head">
+          <div>
+            <div class="face-panel-title">人物相册</div>
+            <div class="face-panel-sub">扫描照片中的人脸，按同一个人自动归类，结果会同步保存。</div>
+          </div>
+          <div class="face-actions">
+            <button class="face-btn" type="button" onclick="scanFaces(false)">扫描新增照片</button>
+            <button class="face-btn" type="button" onclick="scanFaces(true)">重新扫描全部</button>
+            <button class="face-btn" type="button" onclick="clearFaceFilter()">显示全部</button>
+          </div>
+        </div>
+        <div class="face-status" id="faceStatus">人物索引加载中...</div>
+        <div class="people-list" id="peopleList"></div>
+        <div class="active-person-bar" id="activePersonBar">
+          <span id="activePersonText"></span>
+          <button type="button" onclick="clearFaceFilter()">取消筛选</button>
+        </div>
+      </div>
       <div class="album-grid" id="albumGrid"></div>
     </div>
   </section>
@@ -1639,10 +1763,15 @@
       return r.split('').reverse().join('');
     })();
     const IS_LOCAL = window.location.origin === 'http://localhost:3456';
+    const FACE_MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
+    const FACE_MATCH_THRESHOLD = 0.52;
 
 
     let currentFilter = 'all';
     let currentAlbum = 'daily';
+    let faceFilter = '';
+    let faceModelsReady = false;
+    let faceIndex = { version: 1, people: [], photoFaces: {}, updatedAt: null };
 
     // 示例照片
     const samplePhotos = [
@@ -1728,6 +1857,308 @@
         const decoded = atob(data.content.replace(/\n/g, ''));
         return JSON.parse(decodeURIComponent(escape(decoded)));
       } catch { return []; }
+    }
+
+    function emptyFaceIndex() {
+      return { version: 1, people: [], photoFaces: {}, updatedAt: null };
+    }
+
+    function normalizeFaceIndex(data) {
+      const next = data && typeof data === 'object' ? data : emptyFaceIndex();
+      next.version = next.version || 1;
+      next.people = Array.isArray(next.people) ? next.people : [];
+      next.photoFaces = next.photoFaces && typeof next.photoFaces === 'object' ? next.photoFaces : {};
+      return next;
+    }
+
+    async function fetchFaceIndex() {
+      if (IS_LOCAL) {
+        try {
+          const resp = await fetch('/api/faces');
+          if (!resp.ok) return emptyFaceIndex();
+          return normalizeFaceIndex(await resp.json());
+        } catch(e) {
+          return emptyFaceIndex();
+        }
+      }
+      try {
+        const resp = await fetch(API_BASE + '/faces.json', {
+          headers: { 'Authorization': 'token ' + GH_TOKEN }
+        });
+        if (!resp.ok) return emptyFaceIndex();
+        const data = await resp.json();
+        const decoded = atob(data.content.replace(/\n/g, ''));
+        return normalizeFaceIndex(JSON.parse(decodeURIComponent(escape(decoded))));
+      } catch(e) {
+        return emptyFaceIndex();
+      }
+    }
+
+    async function saveFaceIndex(nextIndex) {
+      nextIndex = normalizeFaceIndex(nextIndex);
+      nextIndex.updatedAt = new Date().toISOString();
+      if (IS_LOCAL) {
+        const resp = await fetch('/api/faces', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(nextIndex)
+        });
+        if (!resp.ok) throw new Error('人物索引保存失败');
+        faceIndex = normalizeFaceIndex(await resp.json());
+        return faceIndex;
+      }
+
+      let sha = null;
+      try {
+        const existing = await fetch(API_BASE + '/faces.json', {
+          headers: { 'Authorization': 'token ' + GH_TOKEN }
+        });
+        if (existing.ok) sha = (await existing.json()).sha;
+      } catch(e) {}
+
+      const body = {
+        message: 'Update face index',
+        content: btoa(unescape(encodeURIComponent(JSON.stringify(nextIndex, null, 2))))
+      };
+      if (sha) body.sha = sha;
+      const putResp = await fetch(API_BASE + '/faces.json', {
+        method: 'PUT',
+        headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!putResp.ok) throw new Error('人物索引保存失败: ' + putResp.status);
+      faceIndex = nextIndex;
+      return faceIndex;
+    }
+
+    function setFaceStatus(text) {
+      const el = document.getElementById('faceStatus');
+      if (el) el.textContent = text || '';
+    }
+
+    async function loadFaceModels() {
+      if (faceModelsReady) return;
+      setFaceStatus('正在加载人脸识别模型，第一次会稍慢...');
+      if (!window.faceapi) throw new Error('人脸识别库没有加载成功，请刷新后重试');
+      await Promise.all([
+        faceapi.nets.ssdMobilenetv1.loadFromUri(FACE_MODEL_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(FACE_MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(FACE_MODEL_URL)
+      ]);
+      faceModelsReady = true;
+      setFaceStatus('模型已加载，可以开始扫描照片。');
+    }
+
+    function vectorDistance(a, b) {
+      if (!a || !b || a.length !== b.length) return Infinity;
+      let sum = 0;
+      for (let i = 0; i < a.length; i++) {
+        const d = a[i] - b[i];
+        sum += d * d;
+      }
+      return Math.sqrt(sum);
+    }
+
+    function roundedDescriptor(desc) {
+      return Array.from(desc).map(n => Math.round(n * 1000000) / 1000000);
+    }
+
+    function findBestPerson(descriptor, index) {
+      let best = null;
+      let bestDistance = Infinity;
+      index.people.forEach(person => {
+        const distance = vectorDistance(descriptor, person.descriptor);
+        if (distance < bestDistance) {
+          best = person;
+          bestDistance = distance;
+        }
+      });
+      return best && bestDistance <= FACE_MATCH_THRESHOLD ? { person: best, distance: bestDistance } : null;
+    }
+
+    function updatePersonDescriptor(person, descriptor) {
+      const count = Math.max(1, person.faceCount || 1);
+      person.descriptor = person.descriptor.map((value, i) => {
+        return Math.round(((value * count + descriptor[i]) / (count + 1)) * 1000000) / 1000000;
+      });
+      person.faceCount = count + 1;
+    }
+
+    function assignFaceToPerson(descriptor, photo, index) {
+      const match = findBestPerson(descriptor, index);
+      let person = match ? match.person : null;
+      if (!person) {
+        const nextNumber = index.people.length + 1;
+        person = {
+          id: 'person_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+          name: '人物 ' + nextNumber,
+          descriptor: descriptor,
+          faceCount: 1,
+          photoIds: [],
+          coverPhotoId: photo.id
+        };
+        index.people.push(person);
+      } else {
+        updatePersonDescriptor(person, descriptor);
+      }
+      if (!person.photoIds.includes(photo.id)) person.photoIds.push(photo.id);
+      if (!person.coverPhotoId) person.coverPhotoId = photo.id;
+      return person;
+    }
+
+    function loadPhotoElement(photo) {
+      return new Promise(resolve => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = async function() {
+          if (photo.api_url) {
+            const dataUrl = await loadImageViaAPI(photo.api_url);
+            if (dataUrl) {
+              const fallback = new Image();
+              fallback.onload = () => resolve(fallback);
+              fallback.onerror = () => resolve(null);
+              fallback.src = dataUrl;
+              return;
+            }
+          }
+          resolve(null);
+        };
+        img.src = photo.url;
+      });
+    }
+
+    async function scanFaces(force) {
+      try {
+        await loadFaceModels();
+        const realPhotos = allPhotos.filter(p => p && p.id && p.url);
+        if (!realPhotos.length) {
+          setFaceStatus('还没有可扫描的真实照片。');
+          return;
+        }
+        if (force && !confirm('重新扫描会清空当前人物分类并重新生成，确定继续吗？')) return;
+
+        const working = force ? emptyFaceIndex() : normalizeFaceIndex(JSON.parse(JSON.stringify(faceIndex)));
+        let scanned = 0;
+        let skipped = 0;
+        let facesFound = 0;
+
+        for (let i = 0; i < realPhotos.length; i++) {
+          const photo = realPhotos[i];
+          if (!force && Object.prototype.hasOwnProperty.call(working.photoFaces, photo.id)) {
+            skipped++;
+            continue;
+          }
+          setFaceStatus('正在识别 ' + (i + 1) + '/' + realPhotos.length + '：' + (photo.label || photo.id));
+          const img = await loadPhotoElement(photo);
+          if (!img) {
+            working.photoFaces[photo.id] = [];
+            scanned++;
+            continue;
+          }
+          const detections = await faceapi.detectAllFaces(img).withFaceLandmarks().withFaceDescriptors();
+          working.photoFaces[photo.id] = detections.map(result => {
+            const descriptor = roundedDescriptor(result.descriptor);
+            const person = assignFaceToPerson(descriptor, photo, working);
+            const box = result.detection && result.detection.box ? result.detection.box : {};
+            facesFound++;
+            return {
+              personId: person.id,
+              descriptor: descriptor,
+              score: result.detection ? Math.round(result.detection.score * 1000) / 1000 : null,
+              box: {
+                x: Math.round(box.x || 0),
+                y: Math.round(box.y || 0),
+                width: Math.round(box.width || 0),
+                height: Math.round(box.height || 0)
+              }
+            };
+          });
+          scanned++;
+          await new Promise(r => setTimeout(r, 20));
+        }
+
+        await saveFaceIndex(working);
+        renderPeopleList();
+        renderAlbum();
+        setFaceStatus('扫描完成：处理 ' + scanned + ' 张，跳过 ' + skipped + ' 张，识别到 ' + facesFound + ' 张人脸。');
+      } catch(e) {
+        console.error('[faces] scan failed:', e);
+        setFaceStatus('识别失败：' + e.message);
+      }
+    }
+
+    function getPersonById(id) {
+      return faceIndex.people.find(p => p.id === id);
+    }
+
+    function renderPeopleList() {
+      const list = document.getElementById('peopleList');
+      if (!list) return;
+      faceIndex = normalizeFaceIndex(faceIndex);
+      if (!faceIndex.people.length) {
+        list.innerHTML = '<span style="font-size:12px;color:var(--ink-muted);">还没有人物索引，点击“扫描新增照片”开始。</span>';
+        renderActivePersonBar();
+        return;
+      }
+      list.innerHTML = '';
+      faceIndex.people
+        .slice()
+        .sort((a, b) => (b.photoIds || []).length - (a.photoIds || []).length)
+        .forEach(person => {
+          const chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'person-chip' + (faceFilter === person.id ? ' active' : '');
+          chip.innerHTML = '<span>' + escapeHtml(person.name || '未命名') + '</span><small>' + ((person.photoIds || []).length) + ' 张</small>';
+          chip.onclick = function() { selectPerson(person.id); };
+          chip.ondblclick = function(e) { e.preventDefault(); renamePerson(person.id); };
+          chip.title = '单击筛选，双击改名';
+          list.appendChild(chip);
+        });
+      renderActivePersonBar();
+    }
+
+    async function renamePerson(id) {
+      const person = getPersonById(id);
+      if (!person) return;
+      const nextName = prompt('给这个人物改个名字：', person.name || '');
+      if (!nextName || !nextName.trim()) return;
+      person.name = nextName.trim().slice(0, 30);
+      try {
+        await saveFaceIndex(faceIndex);
+        renderPeopleList();
+        renderAlbum();
+        setFaceStatus('已保存人物名称：' + person.name);
+      } catch(e) {
+        setFaceStatus('保存名称失败：' + e.message);
+      }
+    }
+
+    function selectPerson(id) {
+      faceFilter = id;
+      VISIBLE_COUNT = 50;
+      renderPeopleList();
+      renderAlbum();
+    }
+
+    function clearFaceFilter() {
+      faceFilter = '';
+      renderPeopleList();
+      renderAlbum();
+    }
+
+    function renderActivePersonBar() {
+      const bar = document.getElementById('activePersonBar');
+      const text = document.getElementById('activePersonText');
+      if (!bar || !text) return;
+      const person = faceFilter ? getPersonById(faceFilter) : null;
+      if (!person) {
+        bar.style.display = 'none';
+        text.textContent = '';
+        return;
+      }
+      bar.style.display = 'flex';
+      text.textContent = '正在查看：' + (person.name || '未命名') + ' 的所有照片';
     }
 
     // Compress image (max 1200px for better quality)
@@ -1966,12 +2397,17 @@
 
     function renderAlbum() {
       const grid = document.getElementById('albumGrid');
-      const displayPhotos = [...samplePhotos, ...allPhotos].filter(p => currentFilter === 'all' || p.cat === currentFilter);
+      let displayPhotos = [...samplePhotos, ...allPhotos].filter(p => currentFilter === 'all' || p.cat === currentFilter);
+      if (faceFilter) {
+        const person = getPersonById(faceFilter);
+        const photoIds = new Set(person && person.photoIds ? person.photoIds : []);
+        displayPhotos = displayPhotos.filter(p => photoIds.has(p.id));
+      }
 
       grid.innerHTML = '';
 
       if (displayPhotos.length === 0) {
-        grid.innerHTML = '<p style="text-align:center;color:var(--warm-brown);padding:60px 0;font-size:14px;">暂无照片，点击上方区域上传 \ud83d\udcf8</p>';
+        grid.innerHTML = '<p style="text-align:center;color:var(--warm-brown);padding:60px 0;font-size:14px;">' + (faceFilter ? '这个人物在当前相册里还没有照片。' : '暂无照片，点击上方区域上传 📸') + '</p>';
         return;
       }
 
@@ -2193,6 +2629,7 @@
             allPhotos = allPhotos.concat(ok);
             renderAlbum();
             renderAlbumCovers();
+            renderPeopleList();
           } catch(e) {
             if (retry >= 2) {
               failed += payload.length;
@@ -2593,6 +3030,14 @@
           renderAlbumCovers();
         }
       } catch(e) {}
+      try {
+        faceIndex = await fetchFaceIndex();
+        renderPeopleList();
+        const peopleCount = faceIndex.people.length;
+        setFaceStatus(peopleCount ? '已加载人物索引：' + peopleCount + ' 个人物。' : '还没有人物索引，点击“扫描新增照片”开始。');
+      } catch(e) {
+        setFaceStatus('人物索引加载失败：' + e.message);
+      }
       try {
         const msgs = await loadMessages();
         if (msgs && msgs.length) {
