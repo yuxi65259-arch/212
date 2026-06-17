@@ -1809,6 +1809,7 @@
     const FACE_MATCH_MARGIN = 0.055;
     const FACE_MAX_REFERENCES = 8;
     const FACE_REFERENCE_DISTANCE_MAX = 0.30;
+    const FACE_TARGET_PEOPLE = 9;
 
 
     let currentFilter = 'all';
@@ -2013,6 +2014,98 @@
 
     function roundedDescriptor(desc) {
       return Array.from(desc).map(n => Math.round(n * 1000000) / 1000000);
+    }
+
+    function averageDescriptors(descriptors) {
+      if (!descriptors.length) return [];
+      return descriptors[0].map((_, i) => {
+        const value = descriptors.reduce((sum, descriptor) => sum + descriptor[i], 0) / descriptors.length;
+        return Math.round(value * 1000000) / 1000000;
+      });
+    }
+
+    function makeSingleFaceClusters(singleItems, targetCount) {
+      let clusters = singleItems.map((item, index) => ({
+        id: 'cluster_' + index,
+        items: [item],
+        descriptors: [item.descriptor],
+        centroid: item.descriptor
+      }));
+      if (clusters.length <= targetCount) return clusters;
+
+      while (clusters.length > targetCount) {
+        let bestI = -1;
+        let bestJ = -1;
+        let bestDistance = Infinity;
+        for (let i = 0; i < clusters.length; i++) {
+          for (let j = i + 1; j < clusters.length; j++) {
+            const distance = vectorDistance(clusters[i].centroid, clusters[j].centroid);
+            if (distance < bestDistance) {
+              bestDistance = distance;
+              bestI = i;
+              bestJ = j;
+            }
+          }
+        }
+        if (bestI < 0 || bestJ < 0) break;
+        const merged = {
+          id: clusters[bestI].id,
+          items: clusters[bestI].items.concat(clusters[bestJ].items),
+          descriptors: clusters[bestI].descriptors.concat(clusters[bestJ].descriptors),
+          centroid: []
+        };
+        merged.centroid = averageDescriptors(merged.descriptors);
+        clusters.splice(bestJ, 1);
+        clusters.splice(bestI, 1, merged);
+      }
+      return clusters;
+    }
+
+    function pickClusterCover(cluster) {
+      let best = cluster.items[0];
+      let bestDistance = Infinity;
+      cluster.items.forEach(item => {
+        const distance = vectorDistance(item.descriptor, cluster.centroid);
+        if (distance < bestDistance) {
+          best = item;
+          bestDistance = distance;
+        }
+      });
+      return best;
+    }
+
+    function buildPeopleFromSingleClusters(singleItems, index) {
+      const clusters = makeSingleFaceClusters(singleItems, FACE_TARGET_PEOPLE);
+      index.people = [];
+      clusters.forEach((cluster, clusterIndex) => {
+        const cover = pickClusterCover(cluster);
+        const sortedReferences = cluster.items
+          .slice()
+          .sort((a, b) => vectorDistance(a.descriptor, cluster.centroid) - vectorDistance(b.descriptor, cluster.centroid))
+          .slice(0, FACE_MAX_REFERENCES)
+          .map(item => item.descriptor);
+        const person = {
+          id: 'person_' + Date.now() + '_' + clusterIndex + '_' + Math.random().toString(36).slice(2, 7),
+          name: '人物 ' + (clusterIndex + 1),
+          descriptor: cluster.centroid,
+          descriptors: sortedReferences.length ? sortedReferences : [cluster.centroid],
+          faceCount: 0,
+          photoIds: [],
+          coverPhotoId: cover.photo.id,
+          singlePhotoIds: []
+        };
+        index.people.push(person);
+        cluster.items.forEach(item => {
+          index.photoFaces[item.photo.id] = [{
+            personId: person.id,
+            descriptor: item.descriptor,
+            source: 'single',
+            score: item.score,
+            clusterDistance: Math.round(vectorDistance(item.descriptor, cluster.centroid) * 1000) / 1000,
+            box: item.box
+          }];
+        });
+      });
     }
 
     function findBestPerson(descriptor, index, threshold, options) {
@@ -2232,15 +2325,13 @@
         const noFacePhotos = detectedPhotos.filter(item => item.detections.length === 0);
         noFacePhotos.forEach(item => { working.photoFaces[item.photo.id] = []; });
 
-        singlePhotos.forEach(item => {
+        const singleItems = singlePhotos.map(item => {
           const result = item.detections[0];
           const descriptor = roundedDescriptor(result.descriptor);
-          const person = assignSingleFaceToPerson(descriptor, item.photo, working);
           const box = result.detection && result.detection.box ? result.detection.box : {};
-          working.photoFaces[item.photo.id] = [{
-            personId: person.id,
+          return {
+            photo: item.photo,
             descriptor: descriptor,
-            source: 'single',
             score: result.detection ? Math.round(result.detection.score * 1000) / 1000 : null,
             box: {
               x: Math.round(box.x || 0),
@@ -2248,8 +2339,9 @@
               width: Math.round(box.width || 0),
               height: Math.round(box.height || 0)
             }
-          }];
+          };
         });
+        buildPeopleFromSingleClusters(singleItems, working);
 
         groupPhotos.forEach(item => {
           const usedPersonIds = new Set();
@@ -2280,7 +2372,7 @@
         await saveFaceIndex(working);
         renderPeopleList();
         renderAlbum();
-        setFaceStatus('扫描完成：处理 ' + scanned + ' 张，单人照 ' + singlePhotos.length + ' 张，合照 ' + groupPhotos.length + ' 张，识别到 ' + facesFound + ' 张人脸。');
+        setFaceStatus('扫描完成：处理 ' + scanned + ' 张，单人照 ' + singlePhotos.length + ' 张，合照 ' + groupPhotos.length + ' 张，生成 ' + working.people.length + ' 个人物头像。');
       } catch(e) {
         console.error('[faces] scan failed:', e);
         setFaceStatus('识别失败：' + e.message);
