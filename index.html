@@ -755,6 +755,30 @@
       color: var(--ink-muted);
       letter-spacing: 0;
     }
+    .album-create-card {
+      min-height: 100%;
+      border: 1px dashed rgba(23,35,31,0.24);
+      background:
+        linear-gradient(135deg, rgba(255,253,248,0.82), rgba(239,246,244,0.76));
+      cursor: pointer;
+    }
+    .album-create-card .album-cover-img {
+      display: grid;
+      place-items: center;
+      background: rgba(255,253,248,0.76);
+    }
+    .album-create-plus {
+      width: 72px;
+      height: 72px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--deep);
+      color: #fff;
+      font-size: 34px;
+      line-height: 1;
+      box-shadow: 0 16px 42px rgba(23,35,31,0.20);
+    }
 
     .back-btn {
       padding: 10px 18px;
@@ -1797,6 +1821,7 @@
     const GH_REPO = '212';
     const PHOTO_LIST_URL = `https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/main/photos.json`;
     const API_BASE = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents`;
+    const DEFAULT_ALBUM_IMAGE = 'https://images.unsplash.com/photo-1519682337058-a94d519337bc?w=600&h=400&fit=crop';
     // GitHub token (obfuscated to bypass secret scanning)
     const GH_TOKEN = (() => {
       const r = 'P3vQa0PTI5D4MGtcYbDl60wA1ikN2u1QzOLu_ohg';
@@ -1907,6 +1932,64 @@
         const decoded = atob(data.content.replace(/\n/g, ''));
         return JSON.parse(decodeURIComponent(escape(decoded)));
       } catch { return []; }
+    }
+
+    async function fetchAlbums() {
+      if (IS_LOCAL) {
+        try {
+          const resp = await fetch('/api/albums');
+          if (!resp.ok) return [];
+          const data = await resp.json();
+          return Array.isArray(data) ? data : [];
+        } catch(e) {
+          return [];
+        }
+      }
+      try {
+        const resp = await fetch(API_BASE + '/albums.json', {
+          headers: { 'Authorization': 'token ' + GH_TOKEN }
+        });
+        if (!resp.ok) return [];
+        const data = await resp.json();
+        const decoded = atob(data.content.replace(/\n/g, ''));
+        const albums = JSON.parse(decodeURIComponent(escape(decoded)));
+        return Array.isArray(albums) ? albums : [];
+      } catch(e) {
+        return [];
+      }
+    }
+
+    async function saveAlbums(albums) {
+      albums = Array.isArray(albums) ? albums : [];
+      if (IS_LOCAL) {
+        const resp = await fetch('/api/albums', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(albums)
+        });
+        if (!resp.ok) throw new Error('相册保存失败');
+        return await resp.json();
+      }
+
+      let sha = null;
+      try {
+        const existing = await fetch(API_BASE + '/albums.json', {
+          headers: { 'Authorization': 'token ' + GH_TOKEN }
+        });
+        if (existing.ok) sha = (await existing.json()).sha;
+      } catch(e) {}
+      const body = {
+        message: 'Update albums',
+        content: btoa(unescape(encodeURIComponent(JSON.stringify(albums, null, 2))))
+      };
+      if (sha) body.sha = sha;
+      const putResp = await fetch(API_BASE + '/albums.json', {
+        method: 'PUT',
+        headers: { 'Authorization': 'token ' + GH_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!putResp.ok) throw new Error('相册保存失败: ' + putResp.status);
+      return albums;
     }
 
     function emptyFaceIndex() {
@@ -3047,17 +3130,55 @@
     // ==================== END UPLOAD ====================
 
     // ==================== ALBUM NAVIGATION ====================
-    const albumMeta = [
+    const defaultAlbumMeta = [
       { id: 'daily', name: '宿舍日常', icon: '🏠', img: 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=600&h=400&fit=crop', desc: '温暖日常' },
       { id: 'outing', name: '一起出去玩', icon: '🌄', img: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&h=400&fit=crop', desc: '山川湖海' },
       { id: 'graduation', name: '毕业季', icon: '🎓', img: 'https://images.unsplash.com/photo-1523050854058-8df90110c7f1?w=600&h=400&fit=crop', desc: '青春万岁' },
       { id: 'funny', name: '搞怪合集', icon: '😂', img: 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?w=600&h=400&fit=crop', desc: '快乐时光' },
     ];
+    let customAlbums = [];
+    let albumMeta = defaultAlbumMeta.slice();
+
+    function normalizeAlbum(album) {
+      return {
+        id: String(album.id || '').trim(),
+        name: String(album.name || '未命名相册').trim().slice(0, 24),
+        icon: album.icon || '📷',
+        img: album.img || DEFAULT_ALBUM_IMAGE,
+        desc: String(album.desc || '自建相册').trim().slice(0, 32),
+        custom: !!album.custom
+      };
+    }
+
+    function refreshAlbumMeta() {
+      const seen = new Set(defaultAlbumMeta.map(a => a.id));
+      const cleanCustom = customAlbums
+        .map(normalizeAlbum)
+        .filter(album => album.id && !seen.has(album.id));
+      albumMeta = defaultAlbumMeta.concat(cleanCustom);
+    }
+
+    function makeAlbumId(name) {
+      const base = String(name || 'album')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 28) || 'album';
+      let id = 'custom-' + base;
+      let n = 2;
+      const taken = new Set(albumMeta.map(a => a.id));
+      while (taken.has(id)) {
+        id = 'custom-' + base + '-' + n++;
+      }
+      return id;
+    }
 
     function renderAlbumCovers() {
       const container = document.getElementById('albumCovers');
       const photos = [...samplePhotos, ...allPhotos];
       container.innerHTML = '';
+      refreshAlbumMeta();
       albumMeta.forEach(album => {
         const count = photos.filter(p => p.cat === album.id).length;
         const card = document.createElement('div');
@@ -3070,6 +3191,46 @@
         card.onclick = function() { openAlbum(album.id, album.name, album.icon); };
         container.appendChild(card);
       });
+      const createCard = document.createElement('div');
+      createCard.className = 'album-cover album-create-card';
+      createCard.innerHTML = '<div class="album-cover-img"><div class="album-create-plus">+</div></div>' +
+        '<div class="album-cover-info"><div class="album-cover-name">新建相册</div>' +
+        '<div class="album-cover-desc">添加新的照片分类</div>' +
+        '<div class="album-cover-count">点击创建</div></div>';
+      createCard.onclick = createAlbum;
+      container.appendChild(createCard);
+    }
+
+    async function createAlbum() {
+      const name = prompt('请输入新相册名称：');
+      if (!name || !name.trim()) return;
+      const cleanName = name.trim().slice(0, 24);
+      refreshAlbumMeta();
+      if (albumMeta.some(album => album.name === cleanName)) {
+        alert('已经有同名相册了');
+        return;
+      }
+      const album = {
+        id: makeAlbumId(cleanName),
+        name: cleanName,
+        icon: '📷',
+        img: DEFAULT_ALBUM_IMAGE,
+        desc: '自建相册',
+        custom: true
+      };
+      customAlbums.push(album);
+      refreshAlbumMeta();
+      try {
+        customAlbums = await saveAlbums(customAlbums.map(normalizeAlbum));
+        refreshAlbumMeta();
+        renderAlbumCovers();
+        openAlbum(album.id, album.name, album.icon);
+      } catch(e) {
+        customAlbums = customAlbums.filter(a => a.id !== album.id);
+        refreshAlbumMeta();
+        renderAlbumCovers();
+        alert('新建相册失败：' + e.message);
+      }
     }
 
     function openAlbum(id, name, icon) {
@@ -3409,6 +3570,11 @@
     (async function init() {
       renderAlbum();
       renderAlbumCovers();
+      try {
+        customAlbums = await fetchAlbums();
+        refreshAlbumMeta();
+        renderAlbumCovers();
+      } catch(e) {}
       try {
         const photos = await fetchPhotos();
         if (photos && photos.length) {
