@@ -1913,6 +1913,9 @@
         if (!Array.isArray(person.descriptors)) {
           person.descriptors = person.descriptor ? [person.descriptor] : [];
         }
+        if (!Array.isArray(person.singlePhotoIds)) {
+          person.singlePhotoIds = person.coverPhotoId ? [person.coverPhotoId] : [];
+        }
       });
       return next;
     }
@@ -2073,6 +2076,7 @@
     function rebuildPeoplePhotoIds(index) {
       index.people.forEach(person => {
         person.photoIds = [];
+        person.singlePhotoIds = [];
         person.faceCount = 0;
       });
       Object.entries(index.photoFaces || {}).forEach(([photoId, faces]) => {
@@ -2081,7 +2085,10 @@
           if (!person) return;
           if (!person.photoIds.includes(photoId)) person.photoIds.push(photoId);
           person.faceCount = (person.faceCount || 0) + 1;
-          if (!person.coverPhotoId) person.coverPhotoId = photoId;
+          if (face.source === 'single') {
+            if (!person.singlePhotoIds.includes(photoId)) person.singlePhotoIds.push(photoId);
+            if (!person.coverPhotoId) person.coverPhotoId = photoId;
+          }
         });
       });
       index.people = index.people.filter(person => (person.faceCount || 0) > 0);
@@ -2101,28 +2108,41 @@
         descriptors: [descriptor],
         faceCount: 0,
         photoIds: [],
-        coverPhotoId: photo.id
+        coverPhotoId: photo.id,
+        singlePhotoIds: [photo.id]
       };
       index.people.push(person);
       return person;
     }
 
-    function attachPhotoToPerson(person, photo) {
+    function attachPhotoToPerson(person, photo, source) {
       if (!person.photoIds.includes(photo.id)) person.photoIds.push(photo.id);
-      if (!person.coverPhotoId) person.coverPhotoId = photo.id;
+      if (source === 'single') {
+        if (!Array.isArray(person.singlePhotoIds)) person.singlePhotoIds = [];
+        if (!person.singlePhotoIds.includes(photo.id)) person.singlePhotoIds.push(photo.id);
+        if (!person.coverPhotoId) person.coverPhotoId = photo.id;
+      }
       person.faceCount = (person.faceCount || 0) + 1;
     }
 
-    function assignFaceToPerson(descriptor, photo, index, usedPersonIds) {
-      const match = findBestPersonExcluding(descriptor, index, usedPersonIds);
+    function assignSingleFaceToPerson(descriptor, photo, index) {
+      const match = findBestPerson(descriptor, index);
       let person = match ? match.person : null;
-      if (!person || !canUseExistingPersonInPhoto(person, usedPersonIds)) {
+      if (!person) {
         person = createPerson(descriptor, photo, index);
       } else {
         addPersonReference(person, descriptor);
         recomputePersonCentroid(person);
       }
-      attachPhotoToPerson(person, photo);
+      attachPhotoToPerson(person, photo, 'single');
+      return person;
+    }
+
+    function assignGroupFaceToPerson(descriptor, photo, index, usedPersonIds) {
+      const match = findBestPersonExcluding(descriptor, index, usedPersonIds);
+      if (!match || !canUseExistingPersonInPhoto(match.person, usedPersonIds)) return null;
+      const person = match.person;
+      attachPhotoToPerson(person, photo, 'group');
       if (usedPersonIds) usedPersonIds.add(person.id);
       return person;
     }
@@ -2164,6 +2184,7 @@
         let skipped = 0;
         let facesFound = 0;
 
+        const detectedPhotos = [];
         for (let i = 0; i < realPhotos.length; i++) {
           const photo = realPhotos[i];
           if (!force && Object.prototype.hasOwnProperty.call(working.photoFaces, photo.id)) {
@@ -2178,15 +2199,48 @@
             continue;
           }
           const detections = await faceapi.detectAllFaces(img).withFaceLandmarks().withFaceDescriptors();
+          detectedPhotos.push({ photo: photo, detections: detections });
+          working.photoFaces[photo.id] = [];
+          facesFound += detections.length;
+          scanned++;
+          await new Promise(r => setTimeout(r, 20));
+        }
+
+        const singlePhotos = detectedPhotos.filter(item => item.detections.length === 1);
+        const groupPhotos = detectedPhotos.filter(item => item.detections.length > 1);
+        const noFacePhotos = detectedPhotos.filter(item => item.detections.length === 0);
+        noFacePhotos.forEach(item => { working.photoFaces[item.photo.id] = []; });
+
+        singlePhotos.forEach(item => {
+          const result = item.detections[0];
+          const descriptor = roundedDescriptor(result.descriptor);
+          const person = assignSingleFaceToPerson(descriptor, item.photo, working);
+          const box = result.detection && result.detection.box ? result.detection.box : {};
+          working.photoFaces[item.photo.id] = [{
+            personId: person.id,
+            descriptor: descriptor,
+            source: 'single',
+            score: result.detection ? Math.round(result.detection.score * 1000) / 1000 : null,
+            box: {
+              x: Math.round(box.x || 0),
+              y: Math.round(box.y || 0),
+              width: Math.round(box.width || 0),
+              height: Math.round(box.height || 0)
+            }
+          }];
+        });
+
+        groupPhotos.forEach(item => {
           const usedPersonIds = new Set();
-          working.photoFaces[photo.id] = detections.map(result => {
+          working.photoFaces[item.photo.id] = item.detections.map(result => {
             const descriptor = roundedDescriptor(result.descriptor);
-            const person = assignFaceToPerson(descriptor, photo, working, usedPersonIds);
+            const person = assignGroupFaceToPerson(descriptor, item.photo, working, usedPersonIds);
             const box = result.detection && result.detection.box ? result.detection.box : {};
-            facesFound++;
             return {
-              personId: person.id,
+              personId: person ? person.id : null,
               descriptor: descriptor,
+              source: 'group',
+              matched: !!person,
               score: result.detection ? Math.round(result.detection.score * 1000) / 1000 : null,
               box: {
                 x: Math.round(box.x || 0),
@@ -2196,15 +2250,13 @@
               }
             };
           });
-          scanned++;
-          await new Promise(r => setTimeout(r, 20));
-        }
+        });
 
         rebuildPeoplePhotoIds(working);
         await saveFaceIndex(working);
         renderPeopleList();
         renderAlbum();
-        setFaceStatus('扫描完成：处理 ' + scanned + ' 张，跳过 ' + skipped + ' 张，识别到 ' + facesFound + ' 张人脸。');
+        setFaceStatus('扫描完成：处理 ' + scanned + ' 张，单人照 ' + singlePhotos.length + ' 张，合照 ' + groupPhotos.length + ' 张，识别到 ' + facesFound + ' 张人脸。');
       } catch(e) {
         console.error('[faces] scan failed:', e);
         setFaceStatus('识别失败：' + e.message);
@@ -2221,10 +2273,11 @@
 
     function getPersonAvatarPhoto(person) {
       if (!person) return null;
-      let photo = getPhotoById(person.coverPhotoId);
-      if (!photo && person.photoIds && person.photoIds.length) {
-        photo = getPhotoById(person.photoIds[0]);
+      let photo = null;
+      if (person.singlePhotoIds && person.singlePhotoIds.length) {
+        photo = getPhotoById(person.singlePhotoIds[0]);
       }
+      if (!photo) photo = getPhotoById(person.coverPhotoId);
       return photo && photo.url ? photo : null;
     }
 
