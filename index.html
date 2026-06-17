@@ -1813,6 +1813,8 @@
     const FACE_CLUSTER_DIAMETER_MAX = 0.46;
     const FACE_FRAGMENT_MERGE_THRESHOLD = 0.39;
     const FACE_FRAGMENT_MAX_SIZE = 2;
+    const FACE_MIN_DETECTION_SCORE = 0.72;
+    const FACE_MIN_BOX_SIZE = 42;
 
 
     let currentFilter = 'all';
@@ -2017,6 +2019,14 @@
 
     function roundedDescriptor(desc) {
       return Array.from(desc).map(n => Math.round(n * 1000000) / 1000000);
+    }
+
+    function isUsableFaceDetection(result) {
+      if (!result || !result.detection) return false;
+      const score = result.detection.score || 0;
+      const box = result.detection.box || {};
+      const minSide = Math.min(box.width || 0, box.height || 0);
+      return score >= FACE_MIN_DETECTION_SCORE && minSide >= FACE_MIN_BOX_SIZE;
     }
 
     function averageDescriptors(descriptors) {
@@ -2359,6 +2369,7 @@
         let scanned = 0;
         let skipped = 0;
         let facesFound = 0;
+        let facesIgnored = 0;
 
         const detectedPhotos = [];
         for (let i = 0; i < realPhotos.length; i++) {
@@ -2374,7 +2385,9 @@
             scanned++;
             continue;
           }
-          const detections = await faceapi.detectAllFaces(img).withFaceLandmarks().withFaceDescriptors();
+          const rawDetections = await faceapi.detectAllFaces(img).withFaceLandmarks().withFaceDescriptors();
+          const detections = rawDetections.filter(isUsableFaceDetection);
+          facesIgnored += rawDetections.length - detections.length;
           detectedPhotos.push({ photo: photo, detections: detections });
           working.photoFaces[photo.id] = [];
           facesFound += detections.length;
@@ -2434,7 +2447,7 @@
         await saveFaceIndex(working);
         renderPeopleList();
         renderAlbum();
-        setFaceStatus('扫描完成：处理 ' + scanned + ' 张，单人照 ' + singlePhotos.length + ' 张，合照 ' + groupPhotos.length + ' 张，根据相册生成 ' + working.people.length + ' 个人物头像。');
+        setFaceStatus('扫描完成：处理 ' + scanned + ' 张，单人照 ' + singlePhotos.length + ' 张，合照 ' + groupPhotos.length + ' 张，忽略低质量人脸 ' + facesIgnored + ' 个，生成 ' + working.people.length + ' 个人物头像。');
       } catch(e) {
         console.error('[faces] scan failed:', e);
         setFaceStatus('识别失败：' + e.message);
