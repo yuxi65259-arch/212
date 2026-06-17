@@ -1811,6 +1811,8 @@
     const FACE_REFERENCE_DISTANCE_MAX = 0.30;
     const FACE_CLUSTER_MERGE_THRESHOLD = 0.36;
     const FACE_CLUSTER_DIAMETER_MAX = 0.46;
+    const FACE_FRAGMENT_MERGE_THRESHOLD = 0.39;
+    const FACE_FRAGMENT_MAX_SIZE = 2;
 
 
     let currentFilter = 'all';
@@ -2035,6 +2037,54 @@
       return maxDistance;
     }
 
+    function getClusterMinDistance(a, b) {
+      let best = Infinity;
+      a.descriptors.forEach(left => {
+        b.descriptors.forEach(right => {
+          best = Math.min(best, vectorDistance(left, right));
+        });
+      });
+      return best;
+    }
+
+    function mergeClusterInto(target, source) {
+      target.items = target.items.concat(source.items);
+      target.descriptors = target.descriptors.concat(source.descriptors);
+      target.centroid = averageDescriptors(target.descriptors);
+      return target;
+    }
+
+    function absorbSmallFaceFragments(clusters) {
+      let changed = true;
+      while (changed) {
+        changed = false;
+        clusters.sort((a, b) => b.items.length - a.items.length);
+        for (let i = clusters.length - 1; i >= 0; i--) {
+          const fragment = clusters[i];
+          if (fragment.items.length > FACE_FRAGMENT_MAX_SIZE || clusters.length <= 1) continue;
+          let bestIndex = -1;
+          let bestDistance = Infinity;
+          for (let j = 0; j < clusters.length; j++) {
+            if (i === j) continue;
+            const candidate = clusters[j];
+            if (candidate.items.length < fragment.items.length) continue;
+            const distance = getClusterMinDistance(fragment, candidate);
+            if (distance < bestDistance) {
+              bestDistance = distance;
+              bestIndex = j;
+            }
+          }
+          if (bestIndex >= 0 && bestDistance <= FACE_FRAGMENT_MERGE_THRESHOLD) {
+            mergeClusterInto(clusters[bestIndex], fragment);
+            clusters.splice(i, 1);
+            changed = true;
+            break;
+          }
+        }
+      }
+      return clusters;
+    }
+
     function makeSingleFaceClusters(singleItems) {
       let clusters = singleItems.map((item, index) => ({
         id: 'cluster_' + index,
@@ -2070,7 +2120,7 @@
         clusters.splice(bestJ, 1);
         clusters.splice(bestI, 1, merged);
       }
-      return clusters;
+      return absorbSmallFaceFragments(clusters);
     }
 
     function pickClusterCover(cluster) {
