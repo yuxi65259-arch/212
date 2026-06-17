@@ -66,6 +66,49 @@ async function getPhotosIndex() {
   return { photos: decodeGitHubJsonContent(data.content), sha: data.sha };
 }
 
+function emptyFaceIndex() {
+  return { version: 1, people: [], photoFaces: {}, updatedAt: null };
+}
+
+function normalizeFaceIndex(data) {
+  const next = data && typeof data === 'object' ? data : emptyFaceIndex();
+  next.version = next.version || 1;
+  next.people = Array.isArray(next.people) ? next.people : [];
+  next.photoFaces = next.photoFaces && typeof next.photoFaces === 'object' ? next.photoFaces : {};
+  next.updatedAt = next.updatedAt || null;
+  return next;
+}
+
+async function getFacesIndex() {
+  const resp = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/faces.json`, {
+    headers: githubHeaders()
+  });
+  if (!resp.ok) return { faces: emptyFaceIndex(), sha: null };
+  const data = await resp.json();
+  return { faces: normalizeFaceIndex(decodeGitHubJsonContent(data.content)), sha: data.sha };
+}
+
+async function saveFacesIndex(nextFaces, sha) {
+  const faces = normalizeFaceIndex(nextFaces);
+  faces.updatedAt = new Date().toISOString();
+  const body = {
+    message: 'Update face index',
+    content: Buffer.from(JSON.stringify(faces, null, 2)).toString('base64')
+  };
+  if (sha) body.sha = sha;
+
+  const resp = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/faces.json`, {
+    method: 'PUT',
+    headers: githubHeaders(),
+    body: JSON.stringify(body)
+  });
+  if (!resp.ok) {
+    const errText = await resp.text();
+    throw new Error(`Failed to save faces.json: ${errText.slice(0, 200)}`);
+  }
+  return faces;
+}
+
 async function savePhotosIndex(nextPhotos, sha, message) {
   const body = {
     message,
@@ -160,6 +203,30 @@ async function handleAPI(req, res) {
       jsonResponse(res, 200, photos);
     } catch(e) {
       jsonResponse(res, 200, []);
+    }
+    return;
+  }
+
+  // GET /api/faces - fetch shared face index
+  if (pathname === '/api/faces' && req.method === 'GET') {
+    try {
+      const { faces } = await getFacesIndex();
+      jsonResponse(res, 200, faces);
+    } catch(e) {
+      jsonResponse(res, 200, emptyFaceIndex());
+    }
+    return;
+  }
+
+  // PUT /api/faces - save shared face index
+  if (pathname === '/api/faces' && req.method === 'PUT') {
+    try {
+      const body = await readJsonBody(req);
+      const { sha } = await getFacesIndex();
+      const faces = await saveFacesIndex(body, sha);
+      jsonResponse(res, 200, faces);
+    } catch(e) {
+      jsonResponse(res, 500, { error: e.message });
     }
     return;
   }
