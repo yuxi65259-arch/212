@@ -1809,7 +1809,8 @@
     const FACE_MATCH_MARGIN = 0.055;
     const FACE_MAX_REFERENCES = 8;
     const FACE_REFERENCE_DISTANCE_MAX = 0.30;
-    const FACE_TARGET_PEOPLE = 9;
+    const FACE_CLUSTER_MERGE_THRESHOLD = 0.36;
+    const FACE_CLUSTER_DIAMETER_MAX = 0.46;
 
 
     let currentFilter = 'all';
@@ -2024,16 +2025,25 @@
       });
     }
 
-    function makeSingleFaceClusters(singleItems, targetCount) {
+    function getClusterDiameter(descriptors) {
+      let maxDistance = 0;
+      for (let i = 0; i < descriptors.length; i++) {
+        for (let j = i + 1; j < descriptors.length; j++) {
+          maxDistance = Math.max(maxDistance, vectorDistance(descriptors[i], descriptors[j]));
+        }
+      }
+      return maxDistance;
+    }
+
+    function makeSingleFaceClusters(singleItems) {
       let clusters = singleItems.map((item, index) => ({
         id: 'cluster_' + index,
         items: [item],
         descriptors: [item.descriptor],
         centroid: item.descriptor
       }));
-      if (clusters.length <= targetCount) return clusters;
 
-      while (clusters.length > targetCount) {
+      while (clusters.length > 1) {
         let bestI = -1;
         let bestJ = -1;
         let bestDistance = Infinity;
@@ -2048,12 +2058,14 @@
           }
         }
         if (bestI < 0 || bestJ < 0) break;
+        if (bestDistance > FACE_CLUSTER_MERGE_THRESHOLD) break;
         const merged = {
           id: clusters[bestI].id,
           items: clusters[bestI].items.concat(clusters[bestJ].items),
           descriptors: clusters[bestI].descriptors.concat(clusters[bestJ].descriptors),
           centroid: []
         };
+        if (getClusterDiameter(merged.descriptors) > FACE_CLUSTER_DIAMETER_MAX) break;
         merged.centroid = averageDescriptors(merged.descriptors);
         clusters.splice(bestJ, 1);
         clusters.splice(bestI, 1, merged);
@@ -2075,7 +2087,7 @@
     }
 
     function buildPeopleFromSingleClusters(singleItems, index) {
-      const clusters = makeSingleFaceClusters(singleItems, FACE_TARGET_PEOPLE);
+      const clusters = makeSingleFaceClusters(singleItems);
       index.people = [];
       clusters.forEach((cluster, clusterIndex) => {
         const cover = pickClusterCover(cluster);
@@ -2372,7 +2384,7 @@
         await saveFaceIndex(working);
         renderPeopleList();
         renderAlbum();
-        setFaceStatus('扫描完成：处理 ' + scanned + ' 张，单人照 ' + singlePhotos.length + ' 张，合照 ' + groupPhotos.length + ' 张，生成 ' + working.people.length + ' 个人物头像。');
+        setFaceStatus('扫描完成：处理 ' + scanned + ' 张，单人照 ' + singlePhotos.length + ' 张，合照 ' + groupPhotos.length + ' 张，根据相册生成 ' + working.people.length + ' 个人物头像。');
       } catch(e) {
         console.error('[faces] scan failed:', e);
         setFaceStatus('识别失败：' + e.message);
