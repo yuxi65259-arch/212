@@ -131,6 +131,49 @@ async function savePhotosIndex(nextPhotos, sha, message) {
   });
 }
 
+function normalizeAlbums(data) {
+  if (!Array.isArray(data)) return [];
+  return data
+    .map(album => ({
+      id: String(album.id || '').trim(),
+      name: String(album.name || '未命名相册').trim().slice(0, 24),
+      icon: album.icon || '📷',
+      img: album.img || 'https://images.unsplash.com/photo-1519682337058-a94d519337bc?w=600&h=400&fit=crop',
+      desc: String(album.desc || '自建相册').trim().slice(0, 32),
+      custom: true
+    }))
+    .filter(album => album.id);
+}
+
+async function getAlbumsIndex() {
+  const resp = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/albums.json`, {
+    headers: githubHeaders()
+  });
+  if (!resp.ok) return { albums: [], sha: null };
+  const data = await resp.json();
+  return { albums: normalizeAlbums(decodeGitHubJsonContent(data.content)), sha: data.sha };
+}
+
+async function saveAlbumsIndex(nextAlbums, sha) {
+  const albums = normalizeAlbums(nextAlbums);
+  const body = {
+    message: 'Update albums',
+    content: Buffer.from(JSON.stringify(albums, null, 2)).toString('base64')
+  };
+  if (sha) body.sha = sha;
+
+  const resp = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/albums.json`, {
+    method: 'PUT',
+    headers: githubHeaders(),
+    body: JSON.stringify(body)
+  });
+  if (!resp.ok) {
+    const errText = await resp.text();
+    throw new Error(`Failed to save albums.json: ${errText.slice(0, 200)}`);
+  }
+  return albums;
+}
+
 async function uploadPhotoFile(item, cat, uploader) {
   const image = item.image || '';
   const base64 = image.split(',')[1] || image;
@@ -211,6 +254,30 @@ async function handleAPI(req, res) {
       jsonResponse(res, 200, photos);
     } catch(e) {
       jsonResponse(res, 200, []);
+    }
+    return;
+  }
+
+  // GET /api/albums - fetch custom albums
+  if (pathname === '/api/albums' && req.method === 'GET') {
+    try {
+      const { albums } = await getAlbumsIndex();
+      jsonResponse(res, 200, albums);
+    } catch(e) {
+      jsonResponse(res, 200, []);
+    }
+    return;
+  }
+
+  // PUT /api/albums - save custom albums
+  if (pathname === '/api/albums' && req.method === 'PUT') {
+    try {
+      const body = await readJsonBody(req);
+      const { sha } = await getAlbumsIndex();
+      const albums = await saveAlbumsIndex(body, sha);
+      jsonResponse(res, 200, albums);
+    } catch(e) {
+      jsonResponse(res, 500, { error: e.message });
     }
     return;
   }
