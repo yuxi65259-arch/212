@@ -1837,6 +1837,8 @@
     const PHOTO_LIST_URL = `https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/main/photos.json`;
     const API_BASE = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents`;
     const DEFAULT_ALBUM_IMAGE = 'https://images.unsplash.com/photo-1519682337058-a94d519337bc?w=600&h=400&fit=crop';
+    const INITIAL_VISIBLE_PHOTOS = 24;
+    const LOAD_MORE_PHOTOS = 24;
     // GitHub token (obfuscated to bypass secret scanning)
     const GH_TOKEN = (() => {
       const r = 'P3vQa0PTI5D4MGtcYbDl60wA1ikN2u1QzOLu_ohg';
@@ -2590,7 +2592,7 @@
           const name = person.name || '未命名';
           const avatarPhoto = getPersonAvatarPhoto(person);
           const avatar = avatarPhoto
-            ? '<span class="person-avatar"><img src="' + avatarPhoto.url + '" alt="' + escapeHtml(name) + '" loading="lazy" /></span>'
+            ? '<span class="person-avatar"><img src="' + getDisplayImageUrl(avatarPhoto.url) + '" alt="' + escapeHtml(name) + '" loading="lazy" decoding="async" /></span>'
             : '<span class="person-avatar">' + escapeHtml(name.slice(0, 1) || '?') + '</span>';
           chip.innerHTML = avatar + '<span class="person-name">' + escapeHtml(name) + '</span><small>' + ((person.photoIds || []).length) + ' 张</small><span class="person-rename-btn">改名</span>';
           chip.onclick = function() { selectPerson(person.id); };
@@ -2628,7 +2630,7 @@
     function selectPerson(id) {
       faceFilter = id;
       currentFilter = 'all';
-      VISIBLE_COUNT = 50;
+      VISIBLE_COUNT = INITIAL_VISIBLE_PHOTOS;
       renderPeopleList();
       renderAlbum();
     }
@@ -2663,8 +2665,8 @@
           const img = new Image();
           img.onload = function() {
             const canvas = document.createElement('canvas');
-            const MAX = options.maxSize || 3000;
-            const quality = options.quality || 0.9;
+            const MAX = options.maxSize || 1600;
+            const quality = options.quality || 0.82;
             let w = img.naturalWidth, h = img.naturalHeight;
             if (w > MAX || h > MAX) {
               if (w > h) { h = h * MAX / w; w = MAX; }
@@ -2694,6 +2696,13 @@
         const data = await resp.json();
         return 'data:image/jpeg;base64,' + data.content;
       } catch { return null; }
+    }
+
+    function getDisplayImageUrl(url) {
+      if (!url) return url;
+      const match = url.match(/^https:\/\/raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/([^/]+)\/(.+)$/);
+      if (!match) return url;
+      return 'https://cdn.jsdelivr.net/gh/' + match[1] + '/' + match[2] + '@' + match[3] + '/' + match[4];
     }
 
     async function uploadToServer(dataUrl, cat, label) {
@@ -2885,8 +2894,8 @@
     }
 
     // ==================== RENDER ====================
-    var VISIBLE_COUNT = 50;
-    function loadMorePhotos() { VISIBLE_COUNT += 50; renderAlbum(); }
+    var VISIBLE_COUNT = INITIAL_VISIBLE_PHOTOS;
+    function loadMorePhotos() { VISIBLE_COUNT += LOAD_MORE_PHOTOS; renderAlbum(); }
 
     function renderAlbum() {
       const grid = document.getElementById('albumGrid');
@@ -2917,9 +2926,10 @@
         if (hasImg) {
           const imgEl = document.createElement('img');
           imgEl.crossOrigin = 'anonymous';
-          imgEl.src = photo.url;
+          imgEl.src = getDisplayImageUrl(photo.url);
           imgEl.alt = photo.label || '';
           imgEl.loading = 'lazy';
+          imgEl.decoding = 'async';
           imgEl.onerror = async function() {
             if (photo.api_url) {
               const dataUrl = await loadImageViaAPI(photo.api_url);
@@ -2966,7 +2976,7 @@
           const cap = document.getElementById('lbCaption');
           lb.classList.add('open');
           if (hasImg) {
-            img.src = photo.url;
+            img.src = getDisplayImageUrl(photo.url);
             img.onerror = async function() {
               if (photo.api_url) {
                 const dataUrl = await loadImageViaAPI(photo.api_url);
@@ -3084,7 +3094,7 @@
       var total = pendingFiles.length;
       var processed = 0;
       var chunkSize = IS_LOCAL ? 20 : 1;
-      var compressOptions = total >= 100 ? { maxSize: 1600, quality: 0.82 } : { maxSize: 2400, quality: 0.88 };
+      var compressOptions = total >= 100 ? { maxSize: 1200, quality: 0.76 } : { maxSize: 1600, quality: 0.80 };
 
       for (var start = 0; start < total; start += chunkSize) {
         var files = pendingFiles.slice(start, start + chunkSize);
@@ -3259,7 +3269,7 @@
     function openAlbum(id, name, icon) {
       currentAlbum = id;
       currentFilter = id;
-      VISIBLE_COUNT = 50;
+      VISIBLE_COUNT = INITIAL_VISIBLE_PHOTOS;
       faceFilter = '';
       document.getElementById('albumListView').style.display = 'none';
       document.getElementById('albumDetailView').style.display = 'block';
